@@ -1,0 +1,28 @@
+<!DOCTYPE xml>
+<transitions>
+  <action>
+    <id>0</id>
+    <operator>telljoke</operator>
+    <parameters></parameters>
+  </action>
+  <action>
+    <id>1</id>
+    <operator>performdance</operator>
+    <parameters></parameters>
+  </action>
+  <action>
+    <id>2</id>
+    <operator>playsong</operator>
+    <parameters></parameters>
+  </action>
+  <action>
+    <id>3</id>
+    <operator>domeditation</operator>
+    <parameters></parameters>
+  </action>
+  <sensor>
+    <id>4</id>
+    <operator>sensehighanxiety</operator>
+    <parameters></parameters>
+  </sensor>
+</transitions>

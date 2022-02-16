@@ -1,0 +1,37 @@
+<!DOCTYPE xml>
+<policy>
+  <init_node_id>0</init_node_id>
+  <action_transition>
+    <node_id>0</node_id>
+    <next_node_id>1</next_node_id>
+    <transition_id>2</transition_id>
+    <state_id>-1</state_id>
+  </action_transition>
+  <action_transition>
+    <node_id>1</node_id>
+    <next_node_id>2</next_node_id>
+    <transition_id>1</transition_id>
+    <state_id>-1</state_id>
+  </action_transition>
+  <sensor_transition>
+    <node_id>2</node_id>
+    <next_node_map>
+      <map_entry><sensor_value>TRUE</sensor_value><next_node_id>3</next_node_id></map_entry>
+      <map_entry><sensor_value>FALSE</sensor_value><next_node_id>4</next_node_id></map_entry>
+    </next_node_map>
+    <transition_id>4</transition_id>
+    <state_id>-1</state_id>
+  </sensor_transition>
+  <action_transition>
+    <node_id>3</node_id>
+    <next_node_id>-1</next_node_id>
+    <transition_id>3</transition_id>
+    <state_id>-1</state_id>
+  </action_transition>
+  <action_transition>
+    <node_id>4</node_id>
+    <next_node_id>-1</next_node_id>
+    <transition_id>0</transition_id>
+    <state_id>-1</state_id>
+  </action_transition>
+</policy>
