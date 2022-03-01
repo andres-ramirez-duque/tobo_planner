@@ -1,0 +1,33 @@
+#! /bin/bash
+
+PRP_ROOT=${HOME}/planners/planner-for-relevant-policies
+BASEDIR="$(dirname "$0")"
+
+DEADEND_DETECTION="False"
+
+if [[ $# < 3 ]]; then
+    echo
+    echo "usage: ./getanaction <domain> <problem> <solution_fn> [--keep-files]"
+    echo
+    exit 1
+fi
+
+python2 ${BASEDIR}/make_prp_runner.py ${PRP_ROOT} $3 ${DEADEND_DETECTION}
+
+## XXX 
+chmod u+x cmplan
+
+export PYTHONPATH=${PYTHONPATH}:${PRP_ROOT}/prp-scripts
+python2 ${BASEDIR}/planner.py $1 $2 $3
+
+
+if [ "--keep-files" != "$4" ]; then
+  ${PRP_ROOT}/src/cleanup
+  rm -f policy.out
+  rm -f human_policy.out
+  rm -f graph.dot
+  rm -f action.map
+  rm -f graph.png
+  rm -f unhandled.states
+  rm -f policy.fsap
+fi

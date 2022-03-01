@@ -1,0 +1,25 @@
+
+
+#####################################################################################
+## Running
+#####################################################################################
+
+## requires prp
+# go into getanaction and change PRP_ROOT to point at it.
+
+## to run
+# this will print a single action to the standard out (last line of output)
+
+./getanaction model0.2/domain_env_multiproc.pddl model0.2/scenario.pddl thepolicy.out
+
+
+
+
+#####################################################################################
+## Use in demo
+#####################################################################################
+# the intention is to use this within a loop
+# the action suggested by getanaction is implemented
+# this changes the state of the world 
+# this leads to a new scenario.pddl
+
