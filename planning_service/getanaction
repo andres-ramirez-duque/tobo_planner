@@ -1,26 +1,42 @@
 #! /bin/bash
 
-PRP_ROOT=${HOME}/planners/planner-for-relevant-policies
+[ -d ${HOME}/planners/planner-for-relevant-policies ] && PRP_ROOT=${HOME}/planners/planner-for-relevant-policies
+[ ! -d ${HOME}/planners/planner-for-relevant-policies ] && exit 1
+
 BASEDIR="$(dirname "$0")"
 
 DEADEND_DETECTION="False"
+PROBLEM_FN="pout.pddl"
 
-if [[ $# < 3 ]]; then
+if [[ $# < 4 ]]; then
     echo
-    echo "usage: ./getanaction <domain> <problem> <solution_fn> [--keep-files]"
+    echo "usage: ./getanaction <domain> <background_knowledge> <state_file> <solution_fn> [--keep-files]"
     echo
     exit 1
 fi
 
-python2 ${BASEDIR}/make_prp_runner.py ${PRP_ROOT} $3 ${DEADEND_DETECTION}
+export PYTHONPATH=${PYTHONPATH}:${PRP_ROOT}/prp-scripts
 
+
+
+
+##
+# Scenario creating
+echo "python2 ${BASEDIR}/state_builder.py $1 $2 $3 ${PROBLEM_FN}"
+python2 ${BASEDIR}/state_builder.py $1 $2 $3 ${PROBLEM_FN}
+
+
+##
+# Next action selection
+python2 ${BASEDIR}/make_prp_runner.py ${PRP_ROOT} $4 ${DEADEND_DETECTION}
 ## XXX 
 chmod u+x cmplan
 
-export PYTHONPATH=${PYTHONPATH}:${PRP_ROOT}/prp-scripts
-python2 ${BASEDIR}/planner.py $1 $2 $3
+python2 ${BASEDIR}/planner.py $1 ${PROBLEM_FN} $4
 
 
+##
+# Tidying up
 if [ "--keep-files" != "$4" ]; then
   ${PRP_ROOT}/src/cleanup
   rm -f policy.out

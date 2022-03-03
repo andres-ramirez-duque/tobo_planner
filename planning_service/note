@@ -10,7 +10,7 @@
 ## to run
 # this will print a single action to the standard out (last line of output)
 
-./getanaction model0.2/domain_env_multiproc.pddl model0.2/scenario.pddl thepolicy.out
+./getanaction model0.2/domain_plan.pddl model0.2/scenario_background_knowledge.pddl model0.2/state_frames_scenario.txt aplan.out
 
 
 
@@ -19,9 +19,14 @@
 ## Use in demo
 #####################################################################################
 # the intention is to use this within a loop
+# before the loop clear strategy file:
+rm aplan.out
+# then run as above
 # the action suggested by getanaction is implemented
 # this changes the state of the world 
 # this leads to a new scenario.pddl
+# this can currently be simulated by detailing the state through the interactive prompts.. 
+
 
 
 
