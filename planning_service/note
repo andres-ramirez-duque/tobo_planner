@@ -23,3 +23,17 @@
 # this changes the state of the world 
 # this leads to a new scenario.pddl
 
+
+
+#####################################################################################
+## Scenario Builder
+#####################################################################################
+# requires domain, background knowledge as a problem pddl file, state frames and an ouput problem model filename:
+# uses dummy_state_manager to acquire missing parts of the state and combine with background knowledge to create a single planning problem description.
+# Run e.g.,:
+cd planning_service
+python2 state_builder.py model0.2/domain_plan.pddl model0.2/scenario_background_knowledge.pddl model0.2/state_frames_scenario.txt pout.pddl
+
+
+
+
