@@ -73,11 +73,12 @@ def make_current_scenario(domain_fn, background_knowledge_fn, state_frame_fn):
 def output_scenario(P, output_scenario_fn):
   P._export_problem(open(output_scenario_fn,'w'))
 
-
-if __name__ == '__main__':
-  DEMO_ROOT=os.path.dirname(os.path.abspath(os.sys.argv[0]))
-  domain_fn, background_knowledge_fn, state_frame_fn, output_scenario_fn = os.sys.argv[1:]
+def build_scenario(domain_fn, background_knowledge_fn, state_frame_fn, output_scenario_fn):
   p = make_current_scenario(domain_fn, background_knowledge_fn, state_frame_fn)
   output_scenario(p, output_scenario_fn)
+
+if __name__ == '__main__':
+  domain_fn, background_knowledge_fn, state_frame_fn, output_scenario_fn = os.sys.argv[1:]
+  build_scenario(domain_fn, background_knowledge_fn, state_frame_fn, output_scenario_fn)
 
 

@@ -38,7 +38,8 @@ def run_simulator(dom, prob, sol, interp):
   return PIVAL.validate(dom, prob, sol, importlib.import_module("validators.%s" % interp))
   
 def run_planner(domain_fn, prob):
-  plan_arg = DEMO_ROOT + "/cmplan"
+  #plan_arg = DEMO_ROOT + "/cmplan"
+  plan_arg = "./cmplan"
   args_plan = [plan_arg, domain_fn, prob, "--keep-files"]
   if LOG :
     print " ".join(map(lambda x: str(x), args_plan))
