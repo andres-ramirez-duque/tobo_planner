@@ -17,7 +17,7 @@ Usage: python planner.py <domain> <problem>
     Caveats:
       * Equality predicates are ignored in the grounding / simulation.
         """
-def get_next_action(domain_fn, prob_fn, pi_fn="human_policy.out"):
+def get_next_action(domain_fn, prob_fn, cmplan_abs_path, pi_fn="human_policy.out"):
   
   if os.path.exists(pi_fn):
     ok,first_action = run_simulator(domain_fn, prob_fn, pi_fn, "prp")
@@ -27,7 +27,7 @@ def get_next_action(domain_fn, prob_fn, pi_fn="human_policy.out"):
     return first_action
   if LOG:
     print "Policy insufficient for new state, creating new plan!"
-  npi_fn = run_planner(domain_fn, prob_fn)
+  npi_fn = run_planner(domain_fn, prob_fn, cmplan_abs_path)
   ok,first_action = run_simulator(domain_fn, prob_fn, pi_fn, "prp")
   if not ok:
     print "WARNING: Incomplete plan generated!"
@@ -37,10 +37,8 @@ def get_next_action(domain_fn, prob_fn, pi_fn="human_policy.out"):
 def run_simulator(dom, prob, sol, interp):
   return PIVAL.validate(dom, prob, sol, importlib.import_module("validators.%s" % interp))
   
-def run_planner(domain_fn, prob):
-  #plan_arg = DEMO_ROOT + "/cmplan"
-  plan_arg = "./cmplan"
-  args_plan = [plan_arg, domain_fn, prob, "--keep-files"]
+def run_planner(domain_fn, prob, cmplan_abs_path):
+  args_plan = [cmplan_abs_path, domain_fn, prob, "--keep-files"]
   if LOG :
     print " ".join(map(lambda x: str(x), args_plan))
   exit_c = subprocess.call(args_plan)
@@ -54,5 +52,5 @@ if __name__ == '__main__':
     print USAGE_STRING
     os.sys.exit(1)
 
-  print get_next_action(dom, prob, solution)
+  print get_next_action(dom, prob, solution, "./cmplan")
 
