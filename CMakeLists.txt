@@ -9,7 +9,6 @@ project(tobo_planner)
 ## is used, also find other catkin packages
 find_package(catkin REQUIRED COMPONENTS
   geometry_msgs
-  hri_msgs
   roscpp
   rospy
   sensor_msgs
@@ -61,6 +60,7 @@ find_package(catkin REQUIRED COMPONENTS
 add_service_files(
    FILES
    SensorTransition.srv
+   PlannerMode.srv
 )
 
 ## Generate actions in the 'action' folder
@@ -73,7 +73,7 @@ add_service_files(
 ## Generate added messages and services with any dependencies listed here
 generate_messages(
    DEPENDENCIES
-   geometry_msgs   hri_msgs   sensor_msgs   std_msgs
+   geometry_msgs   sensor_msgs   std_msgs
 )
 
 ################################################
@@ -163,7 +163,7 @@ target_link_libraries(sensortransition_server
 ## Mark executable scripts (Python etc.) for installation
 ## in contrast to setup.py, you can choose the destination
 catkin_install_python(PROGRAMS
-   scripts/planning.py
+   planning_service/getanaction_service.py
    DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
 )
 

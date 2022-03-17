@@ -4,7 +4,7 @@ CMPLAN_ABS_PATH:./cmplan
 
 domain_fn:model0.2/domain_plan.pddl
 background_knowledge_fn:model0.2/scenario_background_knowledge.pddl
-state_frame_fn:model0.2/state_frames_scenario2.yaml
+state_frame_fn:model0.2/state_frames_scenario.yaml
 scenario_fn:pout.pddl
 solution_fn:aplan.out
 

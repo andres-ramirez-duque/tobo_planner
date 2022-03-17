@@ -8,7 +8,7 @@ import getanaction as actionselector
 def handle_get_an_action(req):
     pub = rospy.Publisher('next_action', String, queue_size=10)
 
-    next_action = actionselector.getanaction(actionselector.ros_parameter_service(), is_ros=True)
+    next_action = actionselector.get_an_action(actionselector.ros_parameter_service(), is_ros=True)
 
     pub.publish(next_action)
     return PlannerModeResponse(1)
