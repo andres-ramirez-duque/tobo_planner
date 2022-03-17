@@ -1,9 +1,0 @@
-<launch>
-  <param name="policy_path" value="$(find tobo_planner)/scripts/_policy.xml"/>
-  <param name="choice_ros" value="1.0"/>
-  <param name="transitions_path" value="$(find tobo_planner)/scripts/_transitions.xml"/>
-
-  <node pkg="tobo_planner" type="planning.py" name="planning" output="screen">
-  </node>
-
-</launch>
