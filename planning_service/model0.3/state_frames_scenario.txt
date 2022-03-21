@@ -1,0 +1,15 @@
+boolean:done intro
+boolean:done bye
+boolean:done song1
+boolean:done song2
+boolean:done dance1
+boolean:done dance2
+boolean:done leadmeditation
+boolean:done taichi
+boolean:done quiz
+boolean:done idle1
+boolean:done idle2
+boolean:done idle3
+multi:procstage:procstage preentrance,procstage staffintro,procstage prep1,procstage tourniquet,procstage prep2,procstage iv,procstage tidy,procstage goodbye,procstage postleave,procstage end
+boolean:okanxiety staffintro
+

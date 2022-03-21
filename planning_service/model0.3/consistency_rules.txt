@@ -1,0 +1,13 @@
+naustep + procedurestep + anxteststep = naustep
+naustep + anxteststep = naustep
+naustep + procedurestep = naustep
+procedurestep + anxteststep = naustep
+
+
+OR
+variable
+naustep,procedurestep,anxteststep
+rule:
+multivalue + anticipatedisgood  = 
+
+

@@ -54,13 +54,13 @@ class dummy_parameter_service(parameter_service):
 ### get an action functions
 ############################################################################################################
 
-def build_scenario(domain_fn, background_knowledge_fn, state_frame_fn, scenario_fn, is_ros):
-  state_builder.build_scenario(domain_fn, background_knowledge_fn, state_frame_fn, scenario_fn, is_ros)
+def build_scenario(domain_fn, background_knowledge_fn, state_frame_fn, scenario_fn, is_ros, is_costed):
+  state_builder.build_scenario(domain_fn, background_knowledge_fn, state_frame_fn, scenario_fn, is_ros, is_costed)
 
-def get_next_action(domain_fn, scenario_fn, solution_fn, prp_root, cmplan_abs_path):
-  make_prp_runner.make_prp_runner(prp_root, solution_fn, deadend_detection, cmplan_abs_path)
+def get_next_action(domain_fn, scenario_fn, solution_fn, prp_root, cmplan_abs_path, is_costed):
+  make_prp_runner.make_prp_runner(prp_root, solution_fn, deadend_detection, cmplan_abs_path, is_costed)
   run_a_command( ["chmod", "u+x", cmplan_abs_path])
-  return planner.get_next_action(domain_fn, scenario_fn, cmplan_abs_path, solution_fn)
+  return planner.get_next_action(domain_fn, scenario_fn, cmplan_abs_path, solution_fn, is_costed)
 
 def run_a_command(command_args):
   print " ".join(map(lambda x: str(x), command_args))
@@ -87,7 +87,9 @@ def cleanup(prp_root):
 #  import state_builder, make_prp_runner, planner
 
 def get_an_action(parameter_service, is_ros=False):
+  is_costed = parameter_service.get_param_value('costed_domain', 'false').lower()=="true"
   domain_fn = parameter_service.get_param_value('domain_fn', 'model0.2/domain_plan.pddl')
+  #costed_domain_fn = parameter_service.get_param_value('costed_domain_fn', None)
   background_knowledge_fn = parameter_service.get_param_value('background_knowledge_fn', 'model0.2/scenario_background_knowledge.pddl')
   state_frame_fn = parameter_service.get_param_value('state_frame_fn', 'model0.2/state_frames_scenario.txt')
   scenario_fn = parameter_service.get_param_value('scenario_fn', 'pout.pddl')
@@ -96,8 +98,8 @@ def get_an_action(parameter_service, is_ros=False):
   # link_with_PRP(prp_root)
   cmplan_abs_path = parameter_service.get_param_value('CMPLAN_ABS_PATH','./cmplan')
     
-  build_scenario(domain_fn, background_knowledge_fn, state_frame_fn, scenario_fn, is_ros)
-  next_action = str(get_next_action(domain_fn, scenario_fn, solution_fn, prp_root, cmplan_abs_path))
+  build_scenario(domain_fn, background_knowledge_fn, state_frame_fn, scenario_fn, is_ros, is_costed)
+  next_action = str(get_next_action(domain_fn, scenario_fn, solution_fn, prp_root, cmplan_abs_path, is_costed))
   print ("THE ACTION: " + next_action)
   cleanup(prp_root)
   return next_action

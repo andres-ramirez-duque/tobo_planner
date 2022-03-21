@@ -1,0 +1,31 @@
+# params/state_frames_scenario.yaml
+# Parameters for State Frames Scenario
+---
+boolean_vars:
+    okanxiety staffintro:    false
+    done intro:               false
+    done bye:                 false
+    done song1:               false
+    done song2:               false
+    done dance1:              false
+    done dance2:              false
+    done leadmeditation:      false
+    done taichi:              false
+    done quiz:                false
+    done idle1:               false
+    done idle2:               false
+    done idle3:               false
+    
+
+multi_vars:
+    proc_stage:               'procstage preentrance'
+    
+multi_vars_values:
+    proc_stage:        ['procstage preentrance','procstage staffintro','procstage prep1','procstage tourniquet','procstage prep2','procstage iv','procstage tidy','procstage goodbye','procstage postleave','procstage end']
+    #'0': Preentrance - '1': StaffIntro - '2': Prep1 - '3': Tourniquet - '4': Prep2 - '5': IV - '6': Tidy - '7': GoodBye - '8': PostLeave - '9': end
+    
+    
+to_be_removed:    
+    last_action_done:         false
+    
+
