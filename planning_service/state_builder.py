@@ -6,18 +6,19 @@ import oyaml as yaml
 LOG=False
 
 class StateValueFrame(object):
-  def __init__(self, name, values, source):
+  def __init__(self, name, default_v, values, source):
     self.name = name
+    self.default_v=default_v
     self.values = values
     self.source=source
   def __str__(self):
     return self.name + "={" + ",".join(self.values())+"}"
 class MultiValueFrame(StateValueFrame):
-  def __init__(self,name,values, source):
-    super(MultiValueFrame, self).__init__(name,values, source)
+  def __init__(self,name,default_v,values, source):
+    super(MultiValueFrame, self).__init__(name,default_v,values, source)
 class BooleanValueFrame(StateValueFrame):
-  def __init__(self,name, source):
-    super(BooleanValueFrame, self).__init__(name,(False,True), source)
+  def __init__(self,name, default_v,source):
+    super(BooleanValueFrame, self).__init__(name,default_v,(False,True), source)
 
 class VariableValuator(object):
   def get_bool_var_value(self, v):
@@ -25,7 +26,10 @@ class VariableValuator(object):
   def get_multi_var_value(self, v):
     pass
 class StateManagerProxy(VariableValuator):
-  pass
+  def get_last_executed_action(self):
+    pass
+  def get_previous_action(self):
+    pass
 class DummyStateManagerProxy(StateManagerProxy):
   def __init__(self, frames):
     self._dsm = __import__('dummy_state_manager')
@@ -37,12 +41,18 @@ class DummyStateManagerProxy(StateManagerProxy):
   def get_var_value(self, v):
     frame = self.frames[v]
     return self._dsm.request_feature_value(frame.name, frame.values)
+  def get_last_executed_action(self):
+    return self._dsm.request_value("which was the last executed action?")
+  def get_previous_action(self):
+    return self._dsm.request_value("which was the previous action?")
 class RosStateManagerProxy(StateManagerProxy):
   def __init__(self):
     rospy = __import__('rospy')
     params = rospy.get_param("/parameters")
     self.bool_vars = params["boolean_vars"]
     self.multi_vars = params["multi_vars"]
+    self.executed_action = params["last_executed_action"]
+    self.previous_action = params["previous_action"]
   def get_bool_var_value(self, v):
     if v in self.bool_vars:
       return self.bool_vars[v]
@@ -51,6 +61,11 @@ class RosStateManagerProxy(StateManagerProxy):
     if v in self.multi_vars:
       return self.multi_vars[v]
     print ("WARNING: missing key in state manager dictionary: " + str(v))
+  def get_last_executed_action(self):
+    return self.executed_action
+  def get_previous_action(self):
+    return self.previous_action
+
 
 class InternalStateManager(VariableValuator):
   def __init__(self, next_states, P, frames):
@@ -73,6 +88,16 @@ class InternalStateManager(VariableValuator):
     return False
   def select_next_state(self):
     return self.next_states[0]
+
+class InitialisingStateManager(VariableValuator):
+  def __init__(self, frames):
+    self.frames=dict(map(lambda f: (f.name,f),frames))
+  def get_bool_var_value(self, v):
+    frame = self.frames[v]
+    return frame.default_v
+  def get_multi_var_value(self, v):
+    frame = self.frames[v]
+    return frame.default_v
 
 #print ("WARNING: missing key in state manager dictionary: " + str(frame.name))
 
@@ -102,12 +127,12 @@ def parse_state_frame(sffn):
     
     if not source_vars["boolean_vars"]==None:
       for (bool_k, bool_v) in source_vars["boolean_vars"].items():
-        frames.append(BooleanValueFrame(bool_k, source))
+        frames.append(BooleanValueFrame(bool_k, str(bool_v).lower()=="true", source))
 
     if not source_vars["multi_vars"]==None:
       mv_values_map = source_vars["multi_vars_values"]
       for (multi_k, multi_v) in source_vars["multi_vars"].items():
-        frames.append(MultiValueFrame(multi_k, mv_values_map[multi_k], source))
+        frames.append(MultiValueFrame(multi_k, multi_v, mv_values_map[multi_k], source))
   return frames
 
 def make_proposition(P, value):
@@ -150,23 +175,22 @@ def get_state_progressor(next_states, P, frames):
 def still_on_last_action(a1, a2):
   return a1==a2
 
-def make_current_scenario(domain_fn, background_knowledge_fn, state_frame_fn, is_ros):
+
+def make_current_scenario(domain_fn, background_knowledge_fn, state_frame_fn, output_scenario_fn, is_ros):
   P = parse_background_knowledge(domain_fn, background_knowledge_fn)
-  #import sys, domain_projection as projector
-  #for a in P.actions: print projector.project_action(a, ['naustep','procedurestep','anxteststep']).export()
-  #sys.exit()
-  #executor_a_complete="doactivity1 intro intronau introstep".strip().replace(' ', '_')
-  #previous_a=''.strip().replace(' ', '_')
-  executor_a_complete="doactivity1_song2_reward_debrief".strip().replace(' ', '_')
-  previous_a='progressprocstep2_procedure_debrief'.strip().replace(' ', '_')
-  if still_on_last_action(executor_a_complete, previous_a):
-    a = ''
-  else:
-    a = executor_a_complete
-  next_states = state_progressor.progress_state(domain_fn, "pout.pddl", a)
   state_frames = parse_state_frame(state_frame_fn)
   state_manager = get_state_manager(is_ros, state_frames)
-  internal_state_progressor = get_state_progressor(next_states, P, state_frames)
+  executor_a_complete = state_manager.get_last_executed_action()
+  previous_a=state_manager.get_previous_action()
+  if executor_a_complete == '':
+    internal_state_progressor = InitialisingStateManager(state_frames)
+  else:
+    if still_on_last_action(executor_a_complete, previous_a):
+      a = ''
+    else:
+      a = executor_a_complete
+    next_states = state_progressor.progress_state(domain_fn, output_scenario_fn, a)
+    internal_state_progressor = get_state_progressor(next_states, P, state_frames)
   complete_state_description(P, state_frames, state_manager, internal_state_progressor)
   return P
 
@@ -174,7 +198,7 @@ def output_scenario(P, output_scenario_fn):
   P._export_problem(open(output_scenario_fn,'w'))
 
 def build_scenario(domain_fn, background_knowledge_fn, state_frame_fn, output_scenario_fn, is_ros=False):
-  p = make_current_scenario(domain_fn, background_knowledge_fn, state_frame_fn, is_ros)
+  p = make_current_scenario(domain_fn, background_knowledge_fn, state_frame_fn, output_scenario_fn, is_ros)
   output_scenario(p, output_scenario_fn)
 
 if __name__ == '__main__':

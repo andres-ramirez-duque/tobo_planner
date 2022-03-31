@@ -20,12 +20,11 @@ parameters:
     
 
     multi_vars:
-        #completed_action:         ''
-        #planned_from_action:      ''
     
     multi_vars_values:
 
-    
+    last_executed_action:         ''
+    previous_action:              ''
 
 interaction_manager:
     boolean_vars:

@@ -9,6 +9,6 @@ def request_feature_value(name, accepted_values):
   return ordered_options[choice]
 
 
-
-
+def request_value(query):
+  return input ("    Query: " + str(query) + ": ")
 
