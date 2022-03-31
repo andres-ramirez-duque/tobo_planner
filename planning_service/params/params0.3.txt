@@ -1,0 +1,10 @@
+
+PRP_ROOT:/home/al/ukcan/planner-for-relevant-policies
+CMPLAN_ABS_PATH:./cmplan
+
+domain_fn:model0.3/domain_plan.pddl
+background_knowledge_fn:model0.3/scenario_background_knowledge.pddl
+state_frame_fn:model0.3/state_frames_scenario.yaml
+scenario_fn:pout.pddl
+solution_fn:aplan.out
+
