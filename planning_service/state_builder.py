@@ -30,6 +30,8 @@ class StateManagerProxy(VariableValuator):
     pass
   def get_previous_action(self):
     pass
+  def set_previous_action(self, a):
+    pass
 class DummyStateManagerProxy(StateManagerProxy):
   def __init__(self, frames):
     self._dsm = __import__('dummy_state_manager')
@@ -65,7 +67,8 @@ class RosStateManagerProxy(StateManagerProxy):
     return self.executed_action
   def get_previous_action(self):
     return self.previous_action
-
+  def set_previous_action(self, a):
+    rospy.set_param("/parameters/previous_action", a)
 
 class InternalStateManager(VariableValuator):
   def __init__(self, next_states, P, frames):
@@ -189,6 +192,7 @@ def make_current_scenario(domain_fn, background_knowledge_fn, state_frame_fn, ou
       a = ''
     else:
       a = executor_a_complete
+      state_manager.set_previous_action(a)
     next_states = state_progressor.progress_state(domain_fn, output_scenario_fn, a)
     internal_state_progressor = get_state_progressor(next_states, P, state_frames)
   complete_state_description(P, state_frames, state_manager, internal_state_progressor)
