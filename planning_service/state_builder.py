@@ -49,10 +49,12 @@ class DummyStateManagerProxy(StateManagerProxy):
     return self._dsm.request_value("which was the previous action?")
 class RosStateManagerProxy(StateManagerProxy):
   def __init__(self):
-    rospy = __import__('rospy')
-    params = rospy.get_param("/parameters")
-    self.bool_vars = params["boolean_vars"]
-    self.multi_vars = params["multi_vars"]
+    self.rospy = __import__('rospy')
+    params = self.rospy.get_param("/parameters")
+    if "boolean_vars" in params:
+      self.bool_vars = params["boolean_vars"]
+    if "multi_vars" in params:
+      self.multi_vars = params["multi_vars"]
     self.executed_action = params["last_executed_action"]
     self.previous_action = params["previous_action"]
   def get_bool_var_value(self, v):
@@ -68,7 +70,7 @@ class RosStateManagerProxy(StateManagerProxy):
   def get_previous_action(self):
     return self.previous_action
   def set_previous_action(self, a):
-    rospy.set_param("/parameters/previous_action", a)
+    self.rospy.set_param("/parameters/previous_action", a)
 
 class InternalStateManager(VariableValuator):
   def __init__(self, next_states, P, frames):
@@ -125,14 +127,16 @@ def parse_state_frame(sffn):
 
   frames=[]  
   for source in ("parameters","interaction_manager","planner"):
+    if not source in frame_dict : continue
+    
     source_vars = frame_dict[source]
     if source_vars == None: continue
     
-    if not source_vars["boolean_vars"]==None:
+    if "boolean_vars" in source_vars: #if not source_vars["boolean_vars"]== None:
       for (bool_k, bool_v) in source_vars["boolean_vars"].items():
         frames.append(BooleanValueFrame(bool_k, str(bool_v).lower()=="true", source))
 
-    if not source_vars["multi_vars"]==None:
+    if "multi_vars" in source_vars:#if not source_vars["multi_vars"]== None:
       mv_values_map = source_vars["multi_vars_values"]
       for (multi_k, multi_v) in source_vars["multi_vars"].items():
         frames.append(MultiValueFrame(multi_k, multi_v, mv_values_map[multi_k], source))

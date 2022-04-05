@@ -2,14 +2,14 @@
   <param name="CMPLAN_ABS_PATH" value="/home/toboraspuk/catkin_ws/cmplan"/>
   <param name="PRP_ROOT" value="/home/toboraspuk/usrlib/prp"/>
   
-  <param name="domain_fn" value="$(find tobo_planner)/planning_service/model0.2/domain_plan.pddl"/>
-  <param name="background_knowledge_fn" value="$(find tobo_planner)/planning_service/model0.2/scenario_background_knowledge.pddl"/>
-  <param name="state_frame_fn" value="$(find tobo_planner)/planning_service/model0.2/state_frames_scenario.yaml"/>
+  <param name="domain_fn" value="$(find tobo_planner)/planning_service/model0.3/domain_plan.pddl"/>
+  <param name="background_knowledge_fn" value="$(find tobo_planner)/planning_service/model0.3/scenario_background_knowledge.pddl"/>
+  <param name="state_frame_fn" value="$(find tobo_planner)/planning_service/model0.3/state_frames_scenario.yaml"/>
   
   <param name="scenario_fn" value="$(find tobo_planner)/planning_service/pout.pddl"/>
   <param name="solution_fn" value="$(find tobo_planner)/planning_service/aplan.out"/>
   
-  <rosparam command="load" file="$(find tobo_planner)/planning_service/model0.2/state_frames_scenario.yaml"/>
+  <rosparam command="load" file="$(find tobo_planner)/planning_service/model0.3/state_frames_scenario.yaml"/>
 
   <node pkg="tobo_planner" type="getanaction_service.py" name="get_an_action_service" output="screen">
   </node>
