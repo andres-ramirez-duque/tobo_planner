@@ -41,6 +41,7 @@
     (requiredcategory procedure distraction)
     (requiredcategory procedure cognitivebehaviour)
     (requiredcategory debrief reward)
+    (requiredcategory end byenau)
         
     (anxietytest preprocedure)
     
@@ -48,7 +49,7 @@
   (:goal
     (and
       (procedurestep)
-      (procstage debrief)
+      (procstage end)
     )
   )
 )
