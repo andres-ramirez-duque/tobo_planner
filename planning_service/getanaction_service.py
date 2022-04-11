@@ -2,16 +2,18 @@
 import os
 import rospy
 from std_msgs.msg import String
+from std_msgs.msg import Header
 from tobo_planner.srv import PlannerMode,PlannerModeResponse
 
 import getanaction as actionselector
 
 def handle_get_an_action(req):
-    pub = rospy.Publisher('next_action', String, queue_size=10)
-
+    pub = rospy.Publisher('next_action', Header, queue_size=10)
+    h = Header()
+    h.stamp = rospy.Time.now()
     next_action = actionselector.get_an_action(actionselector.ros_parameter_service(), is_ros=True)
-
-    pub.publish(next_action)
+    h.frame_id = next_action
+    pub.publish(h)
     return PlannerModeResponse(1)
 
 def remove_if_exists(fn):
