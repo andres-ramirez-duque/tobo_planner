@@ -1,6 +1,7 @@
 (define (problem proc1)
   (:domain ivplacementsensing)
   (:objects 
+
     intro bye ivdescription song1 song2 dance1 dance2 leadmeditation taichi quiz idle1 idle2 idle3 - activity
     introstep preprocedure procedure debrief end - procstep
     distraction cognitivebehaviour proceduredescription intronau idle reward byenau - activitytype
@@ -17,6 +18,7 @@
     
     (activitycategory ivdescription proceduredescription)
     
+
     (activitycategory song1 distraction)
     (activitycategory song2 distraction)
     (activitycategory dance1 distraction)
@@ -44,12 +46,15 @@
     (requiredcategory end byenau)
         
     (anxietytest preprocedure)
+
     
   )
   (:goal
     (and
       (procedurestep)
+
       (procstage end)
+
     )
   )
 )

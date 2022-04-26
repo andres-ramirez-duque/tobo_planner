@@ -3,6 +3,7 @@ import os, importlib
 import os.path
 import cmvalidator as PIVAL
 import subprocess
+import metric_stripper
 
 LOG=True
 DEMO_ROOT=""
@@ -17,10 +18,10 @@ Usage: python planner.py <domain> <problem>
     Caveats:
       * Equality predicates are ignored in the grounding / simulation.
         """
-def get_next_action(domain_fn, prob_fn, cmplan_abs_path, pi_fn="human_policy.out"):
+def get_next_action(domain_fn, prob_fn, cmplan_abs_path, pi_fn="human_policy.out", is_costed=False):
   
   if os.path.exists(pi_fn):
-    ok,first_action = run_simulator(domain_fn, prob_fn, pi_fn, "prp")
+    ok,first_action = run_simulator(domain_fn, prob_fn, pi_fn, "prp", is_costed)
   else:
     ok = False
   if ok:
@@ -28,13 +29,18 @@ def get_next_action(domain_fn, prob_fn, cmplan_abs_path, pi_fn="human_policy.out
   if LOG:
     print "Policy insufficient for new state, creating new plan!"
   npi_fn = run_planner(domain_fn, prob_fn, cmplan_abs_path)
-  ok,first_action = run_simulator(domain_fn, prob_fn, pi_fn, "prp")
+  ok,first_action = run_simulator(domain_fn, prob_fn, pi_fn, "prp", is_costed)
   if not ok:
     print "WARNING: Incomplete plan generated!"
   return first_action
 
 
-def run_simulator(dom, prob, sol, interp):
+def run_simulator(dom, prob, sol, interp, is_costed):
+  if is_costed :
+    ncdom, ncprob = "_no_cost_domain.pddl", "_no_cost_problem.pddl"
+    metric_stripper.remove_cost_models(dom, prob, ncdom, ncprob)
+    dom, prob = ncdom, ncprob
+
   return PIVAL.validate(dom, prob, sol, importlib.import_module("validators.%s" % interp))
   
 def run_planner(domain_fn, prob, cmplan_abs_path):

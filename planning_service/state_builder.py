@@ -1,6 +1,10 @@
 import os
 from fondparser import parser, predicate, formula
+<<<<<<< HEAD
 import state_progressor
+=======
+from fondparser.predicate import Predicate
+>>>>>>> costed
 import oyaml as yaml
 
 LOG=False
@@ -104,8 +108,6 @@ class InitialisingStateManager(VariableValuator):
     frame = self.frames[v]
     return frame.default_v
 
-#print ("WARNING: missing key in state manager dictionary: " + str(frame.name))
-
 def parse_background_knowledge(domain_fn, background_knowledge_fn):
   return parser.Problem(domain_fn, background_knowledge_fn)
 
@@ -202,12 +204,52 @@ def make_current_scenario(domain_fn, background_knowledge_fn, state_frame_fn, ou
   complete_state_description(P, state_frames, state_manager, internal_state_progressor)
   return P
 
-def output_scenario(P, output_scenario_fn):
-  P._export_problem(open(output_scenario_fn,'w'))
+def _export_problem (P, fp, sp="  ", is_costed=False):
+  """Write the problem PDDL to given file."""
+  fp.write ("(define" + "\n")
+  fp.write (sp + "(problem %s)%s" % (P.problem_name, "\n"))
+  fp.write (sp + "(:domain %s)%s" % (P.domain_name, "\n"))
 
-def build_scenario(domain_fn, background_knowledge_fn, state_frame_fn, output_scenario_fn, is_ros=False):
-  p = make_current_scenario(domain_fn, background_knowledge_fn, state_frame_fn, output_scenario_fn, is_ros)
-  output_scenario(p, output_scenario_fn)
+  # objects
+  o = []
+  o.append (sp + "(:objects")
+  for obj in P.objects:
+    if P.obj_to_type[obj] == Predicate.OBJECT:
+      o.append (sp + sp + obj)
+    else:
+      #TODO may not be correct
+      t = list (P.obj_to_type [obj]) [0]
+      o.append (sp + sp + "%s - %s" % (obj, t))
+  o.append (sp + ")")
+  fp.write ("\n".join(o) + "\n")
+
+  # init
+  o = []
+  o.append (sp + "(:init")
+  if is_costed:
+    o.append(2*sp + "(= (total-cost) 0)")
+  for f in P.init.args:
+    o.append (f.export (2, sp, True))
+  o.append (sp + ")") # close init
+  fp.write ("\n".join(o) + "\n")
+
+  # goal
+  o = []
+  o.append (sp + "(:goal(and")
+  for p in P.goal.args:
+    o.append (p.export (2, sp, True))
+  o.append (sp + "))") # close goal
+  fp.write ("\n".join (o) + "\n")
+  if is_costed:
+    fp.write ("(:metric minimize (total-cost))\n") # metric
+  fp.write (")") # close define
+
+def output_scenario(P, output_scenario_fn, is_costed):
+  _export_problem(P, open(output_scenario_fn,'w'), is_costed=is_costed)
+
+def build_scenario(domain_fn, background_knowledge_fn, state_frame_fn, output_scenario_fn, is_ros=False, is_costed=False):
+  P = make_current_scenario(domain_fn, background_knowledge_fn, state_frame_fn, is_ros)
+  output_scenario(P, output_scenario_fn, is_costed)
 
 if __name__ == '__main__':
   domain_fn, background_knowledge_fn, state_frame_fn, output_scenario_fn = os.sys.argv[1:]
