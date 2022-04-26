@@ -111,13 +111,13 @@ def validate(dfile, pfile, sol, val):
         #print _state_string(unfluents, u)
 
         a = val.next_action(u)
-        if a.lower() == "goal":
+        if a and a.lower() == "goal":
           return True, a
         
         if first_action==None:
           first_action = a
 
-        if not a:
+        if not a or not a in actions:
             G.node[nodes[u]]['label'] = 'X'
             unhandled.append(u)
         else:
