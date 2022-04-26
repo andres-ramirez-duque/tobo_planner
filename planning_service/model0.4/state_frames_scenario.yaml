@@ -1,0 +1,45 @@
+# params/state_frames_scenario.yaml
+# Parameters for State Frames Scenario
+---
+parameters:
+    boolean_vars:                 
+        okanxiety preprocedure:   false        
+#    multi_vars:                   ''
+        
+#    multi_vars_values:            ''
+        
+    last_executed_action:         ''
+    previous_action:              ''
+
+#interaction_manager:
+#    boolean_vars:                 ''
+        
+#    multi_vars:                   ''
+        
+#    multi_vars_values:            ''
+
+planner:
+    boolean_vars:
+        done ivdescription:       false
+        done intro:               false
+        done bye:                 false
+        done song1:               false
+        done song2:               false
+        done dance1:              false
+        done dance2:              false
+        done leadmeditation:      false
+        done taichi:              false
+        done quiz:                false
+        done idle1:               false
+        done idle2:               false
+        done idle3:               false
+
+    multi_vars:
+        episode_step:             'naustep'
+        proc_stage:               'procstage introstep'
+        
+    multi_vars_values:
+        episode_step:             ['naustep','procedurestep','anxteststep']
+        proc_stage:               ['procstage introstep','procstage end','procstage debrief','procstage preprocedure','procstage procedure']
+
+
