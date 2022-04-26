@@ -16,7 +16,7 @@ keep_files=False
 ### parameters 
 ############################################################################################################
 
-PRP_LOCATIONS=["/home/al/planners/planner-for-relevant-policies",
+PRP_LOCATIONS=["/home/al/ukcan/planner-for-relevant-policies",
                "/home/toboraspuk/usrlib/prp"]
 for loc in PRP_LOCATIONS:
   if os.path.exists(loc):

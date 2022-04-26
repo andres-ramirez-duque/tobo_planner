@@ -1,10 +1,7 @@
 import os
 from fondparser import parser, predicate, formula
-<<<<<<< HEAD
 import state_progressor
-=======
 from fondparser.predicate import Predicate
->>>>>>> costed
 import oyaml as yaml
 
 LOG=False
@@ -248,7 +245,7 @@ def output_scenario(P, output_scenario_fn, is_costed):
   _export_problem(P, open(output_scenario_fn,'w'), is_costed=is_costed)
 
 def build_scenario(domain_fn, background_knowledge_fn, state_frame_fn, output_scenario_fn, is_ros=False, is_costed=False):
-  P = make_current_scenario(domain_fn, background_knowledge_fn, state_frame_fn, is_ros)
+  P = make_current_scenario(domain_fn, background_knowledge_fn, state_frame_fn, output_scenario_fn, is_ros)
   output_scenario(P, output_scenario_fn, is_costed)
 
 if __name__ == '__main__':
