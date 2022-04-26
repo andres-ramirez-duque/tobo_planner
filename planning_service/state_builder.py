@@ -3,6 +3,7 @@ from fondparser import parser, predicate, formula
 import state_progressor
 from fondparser.predicate import Predicate
 import oyaml as yaml
+import metric_stripper
 
 LOG=False
 
@@ -181,8 +182,14 @@ def get_state_progressor(next_states, P, frames):
 def still_on_last_action(a1, a2):
   return a1==a2
 
+def get_next_states(dom, prob, a, is_costed=False):
+  if is_costed :
+    ncdom, ncprob = "_no_cost_domain.pddl", "_no_cost_problem.pddl"
+    metric_stripper.remove_cost_models(dom, prob, ncdom, ncprob)
+    dom, prob = ncdom, ncprob
+  return state_progressor.progress_state(dom, prob, a)
 
-def make_current_scenario(domain_fn, background_knowledge_fn, state_frame_fn, output_scenario_fn, is_ros):
+def make_current_scenario(domain_fn, background_knowledge_fn, state_frame_fn, output_scenario_fn, is_ros, is_costed=False):
   P = parse_background_knowledge(domain_fn, background_knowledge_fn)
   state_frames = parse_state_frame(state_frame_fn)
   state_manager = get_state_manager(is_ros, state_frames)
@@ -196,7 +203,7 @@ def make_current_scenario(domain_fn, background_knowledge_fn, state_frame_fn, ou
     else:
       a = executor_a_complete
       state_manager.set_previous_action(a)
-    next_states = state_progressor.progress_state(domain_fn, output_scenario_fn, a)
+    next_states = get_next_states(domain_fn, output_scenario_fn, a, is_costed)
     internal_state_progressor = get_state_progressor(next_states, P, state_frames)
   complete_state_description(P, state_frames, state_manager, internal_state_progressor)
   return P
@@ -245,7 +252,7 @@ def output_scenario(P, output_scenario_fn, is_costed):
   _export_problem(P, open(output_scenario_fn,'w'), is_costed=is_costed)
 
 def build_scenario(domain_fn, background_knowledge_fn, state_frame_fn, output_scenario_fn, is_ros=False, is_costed=False):
-  P = make_current_scenario(domain_fn, background_knowledge_fn, state_frame_fn, output_scenario_fn, is_ros)
+  P = make_current_scenario(domain_fn, background_knowledge_fn, state_frame_fn, output_scenario_fn, is_ros, is_costed)
   output_scenario(P, output_scenario_fn, is_costed)
 
 if __name__ == '__main__':
