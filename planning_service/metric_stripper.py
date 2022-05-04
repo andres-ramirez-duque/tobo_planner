@@ -1,7 +1,11 @@
 import os
-from shared_planning import original_model_loader as PDDL_loader
-import shared_planning.pddl_io as PLAN_IO
-from shared_types.planning_types import FuncIncrease, ConjEffect
+#from shared_planning import original_model_loader as PDDL_loader
+#import shared_planning.pddl_io as PLAN_IO
+#from shared_types.planning_types import FuncIncrease, ConjEffect
+import planning_helpers
+import planning_helpers.original_model_loader as PDDL_loader
+import planning_helpers.pddl_io as PLAN_IO
+from planning_helpers.planning_types import FuncIncrease, ConjEffect
 
 ###############################################################
 ## Domain
