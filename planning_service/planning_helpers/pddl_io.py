@@ -1,7 +1,6 @@
 
 import parder, FileUtil, planning_types
 from parder import PddlDomainParser, PddlProblemParser, PDDLPlanParser
-import shared_util.FileUtil as FileUtil
 from planning_types import ConjGoal, PropGoal, InstDiscreteAction, NegPropGoal
 LOG=False
 

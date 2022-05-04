@@ -88,7 +88,7 @@ def cleanup(prp_root):
 #  import state_builder, make_prp_runner, planner
 
 def get_an_action(parameter_service, is_ros=False):
-  is_costed = parameter_service.get_param_value('costed_domain', 'false').lower()=="true"
+  is_costed = str(parameter_service.get_param_value('costed_domain', 'false')).lower()=="true"
   domain_fn = parameter_service.get_param_value('domain_fn', 'model0.2/domain_plan.pddl')
   #costed_domain_fn = parameter_service.get_param_value('costed_domain_fn', None)
   background_knowledge_fn = parameter_service.get_param_value('background_knowledge_fn', 'model0.2/scenario_background_knowledge.pddl')
