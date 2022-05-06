@@ -2,11 +2,9 @@ import logging
 import threading
 import time
 
-## TODO
-# keys for timers
-# infallible thread protection
-# anxiety dummy idea
-# how do we consolidate if there are more than one thing executing? Well, we could have a execution timer? Then we need to record aspects and defaults for all remaining. 
+
+LOG=True
+ACTION_CHAIN_LAUNCHER_PAUSE=5
 
 class Enum(object): 
   def __init__(self, tupleList):
@@ -17,22 +15,36 @@ class Enum(object):
   
   def __getitem__(self, key):
     return self.tupleList[key]
+
+def key_maker(obj, t, indx):
+  return obj + "." + t + "." + str(indx)
+def key_deconstruct(k):
+  bits = k.split(".")
+  return bits[0], bits[1], int(bits[2])
+
+def parse_action_str(message):
+  bits=message.split("_")
+  return bits[0][len("action:"):], bits[1:]
+
+"""
+The following are options for the internal representation of the statuses of parts of the system.
+We need to smooth out some of the threading issues. E.g., time delay between planner becoming idle and nau becoming active.
+To do this we assume a repeated sequence of: idle, planning, executing.
+At the start of execution a set of flags are raised and an execution timer is started.
+On all flags being lowered, the execution is finished and the status is idle.
+On the execution timer completing, if all flags are lowered then the signal is ignored,
+If flags are still raised then the relevant processes are halted. The flags are checked again and any for any raised the default action is taken.
+"""
     
-manager_status_enum = Enum(("planning", "executing", "idle"))
-manager_status = manager_status_enum.idle
-man_status_lock = threading.Lock()
+manager_status_enum = Enum(("before","planning","executing","idle","after"))
 planner_status_enum = Enum(("active", "idle"))
-planner_status = planner_status_enum.idle
 nau_status_enum = Enum(("active", "idle"))
-nau_status = nau_status_enum.idle
 web_server_status_enum = Enum(("active", "idle"))
-web_server_status = web_server_status_enum.idle
-interaction_status_enum = Enum(("before", "during", "after"))
-interaction_status = interaction_status_enum.before
 procedure_status_enum = Enum(("null", "introstep", "preprocedure", "procedure", "debrief", "end"))
-procedure_status = procedure_status_enum.null
 interaction_step_status_enum = Enum(("anxiety_test", "nau", "transition"))
-interaction_step_status = None
+
+
+
 
 
 class Timer(object):
@@ -45,7 +57,8 @@ class Timer(object):
     x.start()
     
   def thread_function(self, args):
-    print str(args), "---> going to sleep..."
+    if LOG:
+      print str(args), "---> going to sleep..."
     time.sleep(self.t)
     self._trigger(args)
     
@@ -60,14 +73,14 @@ class MessageGiver(Timer):
   
   def _trigger(self, args):
     apply(self.s, (self.m, args))
-    #on_timer_event(self.m, args) # source?
 
 class WebServer(MessageGiver):
   def __init__(self, t, s):
     super(WebServer, self).__init__(t, s, None)
+    self.web_server_status = web_server_status_enum.idle
   
-  def ask_for_user_input(self, m, args = (1,)):
-    self.m = m
+  def ask_for_user_input(self, options, default, args = (1,)):
+    self.m = default
     self.start(args)
   
   def disable_user_input(self, m):
@@ -79,77 +92,193 @@ class Planner(Timer):
     self.s=s
     self.steps = steps
     self.next_id = 0
+    self.planner_status = planner_status_enum.idle
     
   def _trigger(self, args):
-    #self.s.on_timer_event(self.m)
     apply(self.s, (self.steps[self.next_id],args))
     self.next_id+=1
 
+  def is_active(self) :
+    return not self.planner_status == planner_status_enum.idle
+
 class int_manager(object):
   def __init__(self, plan):
-    self.web_server = WebServer(5, self.on_timer_event)
+    self.web_server = WebServer(50, self.on_timer_event)
     self.planner = Planner(2, self.get_message, plan)
-    self.message_keys = []
+    self.active_requests = []
+    self.request_defaults = {}
+    self.active_requests_lock = threading.Lock()
+    
+    self.status = manager_status_enum.before
+    self.status_lock = threading.Lock()
+    self.procedure_status = procedure_status_enum.null # XXX TODO
+    self.interaction_step_status = None # XXX TODO
+    
+    self.counter=0
+    self.init_timeouts()
+    
+  def init_timeouts(self):
+    self.op_timeout = {"progressprocstep": 10,
+                       "doactivity": 20
+                       }
 
-  def ask_user_progress_proc_step(self, message, k):
-    self.web_server.ask_for_user_input(message, (k,))
+  def ask_user_progress_proc_step(self, options, default, k):
+    self.web_server.ask_for_user_input(options, default, (k,))
 
-  def process_progress_proc_step_action(self, message):
-    global web_server_status
-    web_server_status = web_server_status_enum.active
-    bits = message.split("_")
-    s1,s2 = bits[1:3]
-    k = "progresser"
-    web_server = MessageGiver(10, self.on_timer_event, s1).start((k,))
-    self.ask_user_progress_proc_step(s2, k)
+  def process_progress_proc_step_action(self, op, params):
+    s1,s2 = params[0:2]
+    default = s1
+    label = "stage progression"
+    self.ask_user_progress_proc_step((s1,s2), s2, key_maker("web server",label, self.counter))
+    self.add_flag(label, default)
 
+  def process_do_activity_action(self, op, params):
+    pass
 
-  def get_message(self, message, args): # a broadcast from the planner
-    global planner_status
-    print "++++ Received action: " + message
-    planner_status = planner_status_enum.idle
-    if message.startswith("action:progressprocstep") :
-      self.process_progress_proc_step_action(message)
-    if message.startswith("action:goal"):
-      global interaction_status
-      interaction_status = interaction_status_enum.after
+  def process_action_execution(self, message):
+    self.set_status_if_in_one_of(manager_status_enum.executing, (manager_status_enum.planning,))
+    op,params = parse_action_str(message)
+    if op.startswith("progressprocstep") :
+      self.process_progress_proc_step_action(op,params)
+      t = self.op_timeout["progressprocstep"]
+    elif op.startswith("doactivity"):
+      self.process_do_activity_action(op,params)
+      t = self.op_timeout["doactivity"]
+    elif op.startswith("goal"):
+      if not self.set_status_if_in_one_of(manager_status_enum.after, (manager_status_enum.executing,)):
+        print "WARNING: goal achieved, but manager lost.."
+      return
+    else:
+      print "WARNING: unknown action: " + message
+      return
+    MessageGiver(t, self.on_timer_event, None).start((key_maker("manager","timeout",self.counter),))
+    
 
+  def get_message(self, message, k): # a broadcast from the planner
+    obj, t, indx = key_deconstruct(k)
+    if t=="action request":
+      
+      if LOG:
+        print "++++ Received action: " + message
+
+      self.process_action_execution(message)
+    else:
+      print "WARNING: unknown message received:", obj, t, indx, "message: ", message
+
+  def add_flag(self, flag, default):
+    self.active_requests_lock.acquire()
+    self.active_requests.append(flag)
+    self.request_defaults[flag]=default
+    self.active_requests_lock.release()
+
+  def incr_counter_and_clear_flags(self):
+    self.active_requests_lock.acquire()
+    self.counter+=1
+    del self.active_requests[:]
+    self.active_requests_lock.release()
+    
+  def is_active_flag(self, flag):
+      self.active_requests_lock.acquire()
+      b = flag in self.active_requests
+      self.active_requests_lock.release()
+      return b
+    
   def start_action_chain(self):
-    global planner_status
-    print "+ Calling planner.."
-    planner_status = planner_status_enum.active
-    self.planner.start()
+    self.incr_counter_and_clear_flags()
+
+    if LOG:
+      print "+ Calling planner..", self.counter
+    if self.set_status_if_in_one_of(manager_status_enum.planning, (manager_status_enum.idle,)):
+      self.planner.start((key_maker("planner","action request",self.counter),))
+
+  def process_request_reply(self, flag, message):
+    self.active_requests_lock.acquire()
+    self.active_requests.remove(flag)
+    print "TODO: do something about ", flag, message
+    self.active_requests_lock.release()
+
+  def record_if_requests_completed(self):
+    self.active_requests_lock.acquire()
+    self._record_if_requests_completed()
+    self.active_requests_lock.release()
+  def _record_if_requests_completed(self):
+    if len(self.active_requests) == 0:
+      self.set_status_if_in_one_of(manager_status_enum.idle, (manager_status_enum.executing,))
+
+  def handle_timeout(self, indx, message):
+    self.active_requests_lock.acquire()
+    if self.counter == indx :
+      if LOG:
+        print "@TIMEOUT:"
+      for flag in self.active_requests:
+        print "TODO: do something about ", flag, self.request_defaults[flag]
+        print "TODO: need to send message for process", flag, "to disengage."
+      del self.active_requests[:]
+      self._record_if_requests_completed()
+    else:
+      if LOG:
+        print "Ignoring timeout - previous step.."
+    self.active_requests_lock.release()
 
   def on_timer_event(self, message, k):
-    if not k in self.message_keys:
-      global web_server_status
-      web_server_status = web_server_status_enum.idle
-      #web_server.disable_user_input(message)
-      self.message_keys.append(k)
-      print "++++ On timer event: " + str(message) + " from: ", k
+    obj, t, indx = key_deconstruct(k)
+    if obj == "manager":
+      if t == "timeout":
+        self.handle_timeout(indx, message)
+      else:
+        print "WARNING: unknown manager type: ", message, k
     else:
-      print "++++ Ignoring: ", k
+      if self.is_active_flag(t):
+        if LOG:
+          print "++++ On timer event: " + str(message) + " from: ", k
+        self.process_request_reply(t, message)
+      else:
+        if LOG:
+          print "++++ Ignoring: ", k
+    self.record_if_requests_completed()
+
+  def set_status_if_in_one_of(self, status, statuses):
+    self.status_lock.acquire()
+    if self.status in statuses:
+      b = True
+      self.status = status
+    else:
+      b = False
+    self.status_lock.release()
+    return b
+
+  def is_ready(self):
+    return self.status_is_one_of((manager_status_enum.idle,))
+
+  def is_finished(self):
+    return self.status_is_one_of((manager_status_enum.after,))
+
+  def status_is_one_of(self, statuses):
+    self.status_lock.acquire()
+    b = self.status in statuses
+    self.status_lock.release()
+    return b
+
+  def get_status_str(self):
+    self.status_lock.acquire()
+    s = manager_status_enum[self.status]
+    self.status_lock.release()
+    return s
+
+  def _start_action_chain_when_appropriate(self):
+    while not self.is_finished():
+      print "@@@@@@MainLoop Status: " + str(self.get_status_str())
+      if self.is_ready():
+        self.start_action_chain()
+      time.sleep(ACTION_CHAIN_LAUNCHER_PAUSE)
 
   def init(self):
-    global interaction_status
-    if interaction_status == interaction_status_enum.before:
-      interaction_status = interaction_status_enum.during
-  
-    while not interaction_status == interaction_status_enum.after:
-      print (planner_status, nau_status, web_server_status)
-      if planner_status == planner_status_enum.idle and nau_status == nau_status_enum.idle and web_server_status == web_server_status_enum.idle:
-      
-        if interaction_status == interaction_status_enum.during:
-          self.start_action_chain()
-      time.sleep(5)
-    print "=== Completed Int manager loop ====="
+    self.set_status_if_in_one_of(manager_status_enum.idle, (manager_status_enum.before,))
+    self._start_action_chain_when_appropriate()
+    if LOG:
+      print "=== Completed Int manager loop ====="
   
   
-def test():
-  get_message("action:progressprocstep1_introstep_preprocedure")
-
-
-#test()
 
 im = int_manager(("action:doactivity2bold_intro_intronau_introstep_medium_low","action:progressprocstep1_introstep_preprocedure","action:goal"))
 im.init()
