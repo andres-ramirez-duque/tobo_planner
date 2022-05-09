@@ -124,6 +124,9 @@ class service_provider(object):
     apply(self.webserver_broadcast_f, (message, self._last_tag))
   def disable_user_info_request(self, tag):
     pass
+  def set_parameter(self, path, v):
+    print "[SP] Set: " + path + " to: " + str(v)
+
 
 class dummy_ros_proxy(service_provider):
   def __init__(self, plan):
@@ -234,7 +237,11 @@ class int_manager(object):
       self.service_provider.request_action(key_maker("planner","action request",self.counter))
 
   def process_request_reply(self, flag, message):
-    print "TODO: do something about ", flag, message
+    if flag == "stage progression":
+      path_to_stage_param="parameters/multi_vars/proc_stage" # maybe just a yaml parameter?
+      self.service_provider.set_parameter(path_to_stage_param, message)
+    else:
+      print "TODO: do something about ", flag, message
 
   def record_if_requests_completed(self):
     self.active_requests_lock.acquire()
@@ -255,7 +262,8 @@ class int_manager(object):
         if LOG:
           print "@TIMEOUT:"
         for flag in self.active_requests:
-          print "TODO: do something about ", flag, self.request_defaults[flag]
+          #print "TODO: do something about ", flag, self.request_defaults[flag]
+          self.process_request_reply(flag, self.request_defaults[flag])
           self.handle_disengagements(flag)
             
         del self.active_requests[:]
