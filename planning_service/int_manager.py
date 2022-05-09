@@ -101,10 +101,52 @@ class Planner(Timer):
   def is_active(self) :
     return not self.planner_status == planner_status_enum.idle
 
-class int_manager(object):
+
+class service_provider(object):
+  def __init__(self):
+    self.action_broadcast_f = None
+    self.webserver_broadcast_f = None
+    self._last_tag = None
+  def request_action(self, tag):
+    self._last_tag = tag
+    self._request_action()
+  def ask_for_user_input(self, options, default, k):
+    self._last_tag = k
+    self._ask_for_user_input(options, default, k)
+    
+  def register_for_action_broadcast(self, callback):
+    self.action_broadcast_f = callback
+  def register_for_webserver_broadcast(self, callback):
+    self.webserver_broadcast_f = callback
+  def on_received_planner_action(self, message, t=None):
+    apply(self.action_broadcast_f, (message, self._last_tag))
+  def on_received_webserver_message(self, message, t=None):
+    apply(self.webserver_broadcast_f, (message, self._last_tag))
+  def disable_user_info_request(self, tag):
+    pass
+
+class dummy_ros_proxy(service_provider):
   def __init__(self, plan):
-    self.web_server = WebServer(20, self.on_timer_event)
-    self.planner = Planner(2, self.get_message, plan)
+    super(dummy_ros_proxy, self).__init__()
+    self.planner = Planner(2, self.on_received_planner_action, plan)
+    self.web_server = WebServer(10, self.on_received_webserver_message)
+  def _request_action(self):
+    self.planner.start((self._last_tag,))
+  def _ask_for_user_input(self, options, default, k):
+    self.web_server.ask_for_user_input(options, default, (k,))
+
+class ros_proxy(service_provider):
+  def __init__(self):
+    pass
+
+  
+
+
+class int_manager(object):
+  def __init__(self, service_provider):
+    self.service_provider = service_provider
+    self.service_provider.register_for_action_broadcast(self.get_message)
+    self.service_provider.register_for_webserver_broadcast(self.webserver_message)
     self.active_requests = []
     self.request_defaults = {}
     self.active_requests_lock = threading.Lock()
@@ -118,12 +160,12 @@ class int_manager(object):
     self.init_timeouts()
     
   def init_timeouts(self):
-    self.op_timeout = {"progressprocstep": 30,
-                       "doactivity": 20
+    self.op_timeout = {"progressprocstep": 10,
+                       "doactivity": 10
                        }
 
   def ask_user_progress_proc_step(self, options, default, k):
-    self.web_server.ask_for_user_input(options, default, (k,))
+    self.service_provider.ask_for_user_input(options, default, k)
 
   def process_progress_proc_step_action(self, op, params):
     s1,s2 = params[0:2]
@@ -189,7 +231,7 @@ class int_manager(object):
     if LOG:
       print "+ Calling planner..", self.counter
     if self.set_status_if_in_one_of(manager_status_enum.planning, (manager_status_enum.idle,)):
-      self.planner.start((key_maker("planner","action request",self.counter),))
+      self.service_provider.request_action(key_maker("planner","action request",self.counter))
 
   def process_request_reply(self, flag, message):
     print "TODO: do something about ", flag, message
@@ -201,7 +243,11 @@ class int_manager(object):
   def _record_if_requests_completed(self):
     if len(self.active_requests) == 0:
       self.set_status_if_in_one_of(manager_status_enum.idle, (manager_status_enum.executing,))
-
+  
+  def handle_disengagements(self, flag):
+    if flag == "stage progression":
+      self.service_provider.disable_user_info_request(flag)
+  
   def handle_timeout(self, indx, message):
     if self.status_is_one_of((manager_status_enum.executing,)):
       self.active_requests_lock.acquire()
@@ -210,7 +256,8 @@ class int_manager(object):
           print "@TIMEOUT:"
         for flag in self.active_requests:
           print "TODO: do something about ", flag, self.request_defaults[flag]
-          print "TODO: need to send message for process", flag, "to disengage."
+          self.handle_disengagements(flag)
+            
         del self.active_requests[:]
         self._record_if_requests_completed()
       else:
@@ -221,6 +268,18 @@ class int_manager(object):
         if LOG:
           print "Ignoring timeout - no longer executing.."
 
+  def webserver_message(self, message, k):
+    print k
+    obj, t, indx = key_deconstruct(k)
+    if self.remove_request_if_active(t, indx):
+      if LOG:
+        print "++++ On timer event: " + str(message) + " from: ", k
+      self.process_request_reply(t, message)
+      self.record_if_requests_completed()
+    else:
+      if LOG:
+        print "++++ Ignoring: ", k
+
   def on_timer_event(self, message, k):
     obj, t, indx = key_deconstruct(k)
     if obj == "manager":
@@ -228,15 +287,6 @@ class int_manager(object):
         self.handle_timeout(indx, message)
       else:
         print "WARNING: unknown manager type: ", message, k
-    else:
-      if self.remove_request_if_active(t, indx):
-        if LOG:
-          print "++++ On timer event: " + str(message) + " from: ", k
-        self.process_request_reply(t, message)
-      else:
-        if LOG:
-          print "++++ Ignoring: ", k
-      self.record_if_requests_completed()
 
   def remove_request_if_active(self, flag, indx):
     # Still a fresh request, if: executing, same index and flag is active
@@ -293,8 +343,8 @@ class int_manager(object):
       print "=== Completed Int manager loop ====="
   
   
-
-im = int_manager(("action:doactivity2bold_intro_intronau_introstep_medium_low","action:progressprocstep1_introstep_preprocedure","action:goal"))
+plan = ("action:doactivity2bold_intro_intronau_introstep_medium_low","action:progressprocstep1_introstep_preprocedure","action:goal")
+im = int_manager(dummy_ros_proxy(plan))
 im.init()
 
 
