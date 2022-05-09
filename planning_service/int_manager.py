@@ -103,7 +103,7 @@ class Planner(Timer):
 
 class int_manager(object):
   def __init__(self, plan):
-    self.web_server = WebServer(50, self.on_timer_event)
+    self.web_server = WebServer(20, self.on_timer_event)
     self.planner = Planner(2, self.get_message, plan)
     self.active_requests = []
     self.request_defaults = {}
@@ -118,7 +118,7 @@ class int_manager(object):
     self.init_timeouts()
     
   def init_timeouts(self):
-    self.op_timeout = {"progressprocstep": 10,
+    self.op_timeout = {"progressprocstep": 30,
                        "doactivity": 20
                        }
 
@@ -203,19 +203,23 @@ class int_manager(object):
       self.set_status_if_in_one_of(manager_status_enum.idle, (manager_status_enum.executing,))
 
   def handle_timeout(self, indx, message):
-    self.active_requests_lock.acquire()
-    if self.counter == indx :
-      if LOG:
-        print "@TIMEOUT:"
-      for flag in self.active_requests:
-        print "TODO: do something about ", flag, self.request_defaults[flag]
-        print "TODO: need to send message for process", flag, "to disengage."
-      del self.active_requests[:]
-      self._record_if_requests_completed()
+    if self.status_is_one_of((manager_status_enum.executing,)):
+      self.active_requests_lock.acquire()
+      if self.counter == indx :
+        if LOG:
+          print "@TIMEOUT:"
+        for flag in self.active_requests:
+          print "TODO: do something about ", flag, self.request_defaults[flag]
+          print "TODO: need to send message for process", flag, "to disengage."
+        del self.active_requests[:]
+        self._record_if_requests_completed()
+      else:
+        if LOG:
+          print "Ignoring timeout - previous step.."
+      self.active_requests_lock.release()
     else:
-      if LOG:
-        print "Ignoring timeout - previous step.."
-    self.active_requests_lock.release()
+        if LOG:
+          print "Ignoring timeout - no longer executing.."
 
   def on_timer_event(self, message, k):
     obj, t, indx = key_deconstruct(k)
@@ -225,22 +229,27 @@ class int_manager(object):
       else:
         print "WARNING: unknown manager type: ", message, k
     else:
-      if remove_request_if_active(t):
+      if self.remove_request_if_active(t, indx):
         if LOG:
           print "++++ On timer event: " + str(message) + " from: ", k
         self.process_request_reply(t, message)
       else:
         if LOG:
           print "++++ Ignoring: ", k
-    self.record_if_requests_completed()
+      self.record_if_requests_completed()
 
-  def remove_request_if_active(self, flag):
-    self.active_requests_lock.acquire()
-    b=self.is_active_flag(t):
-    if b:
-      self.active_requests.remove(flag)
+  def remove_request_if_active(self, flag, indx):
+    # Still a fresh request, if: executing, same index and flag is active
+    b=False
+    if self.status_is_one_of((manager_status_enum.executing,)):
+      self.active_requests_lock.acquire()
       
-    self.active_requests_lock.release()
+      if self.counter == indx :
+        if flag in self.active_requests:
+          b = True
+          self.active_requests.remove(flag)
+      
+      self.active_requests_lock.release()
     return b
 
   def set_status_if_in_one_of(self, status, statuses):
