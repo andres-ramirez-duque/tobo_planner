@@ -192,10 +192,7 @@ class int_manager(object):
       self.planner.start((key_maker("planner","action request",self.counter),))
 
   def process_request_reply(self, flag, message):
-    self.active_requests_lock.acquire()
-    self.active_requests.remove(flag)
     print "TODO: do something about ", flag, message
-    self.active_requests_lock.release()
 
   def record_if_requests_completed(self):
     self.active_requests_lock.acquire()
@@ -228,7 +225,7 @@ class int_manager(object):
       else:
         print "WARNING: unknown manager type: ", message, k
     else:
-      if self.is_active_flag(t):
+      if remove_request_if_active(t):
         if LOG:
           print "++++ On timer event: " + str(message) + " from: ", k
         self.process_request_reply(t, message)
@@ -237,13 +234,21 @@ class int_manager(object):
           print "++++ Ignoring: ", k
     self.record_if_requests_completed()
 
+  def remove_request_if_active(self, flag):
+    self.active_requests_lock.acquire()
+    b=self.is_active_flag(t):
+    if b:
+      self.active_requests.remove(flag)
+      
+    self.active_requests_lock.release()
+    return b
+
   def set_status_if_in_one_of(self, status, statuses):
     self.status_lock.acquire()
-    if self.status in statuses:
-      b = True
+    b = self.status in statuses 
+    if b:
       self.status = status
-    else:
-      b = False
+
     self.status_lock.release()
     return b
 
