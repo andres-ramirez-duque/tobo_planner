@@ -74,11 +74,23 @@ class RosStateManagerProxy(StateManagerProxy):
   def set_previous_action(self, a):
     self.rospy.set_param("/parameters/previous_action", a)
 
+def count_gp_in_ps(l1, d):
+  i = 0
+  for gp in l1:
+    if gp.name in d:
+      for p in d[gp.name]:
+        z = map(lambda (a1,a2): a1[0]==a2[0], zip(gp.ground_args, p.args)) 
+        if not False in z:
+          i+=1
+          break
+  return i
+
 class InternalStateManager(VariableValuator):
   def __init__(self, next_states, P, frames):
     self.next_states=next_states
     self._P=P
     self.frames=dict(map(lambda f: (f.name,f),frames))
+    self._next_state=None
   def get_bool_var_value(self, v):
     return self.find_in_state(v)
   def get_multi_var_value(self, v):
@@ -87,14 +99,22 @@ class InternalStateManager(VariableValuator):
       if self.find_in_state(e):
         return e
   def find_in_state(self, v):
-    s = self.select_next_state()
+    s = self._next_state
     bits = v.split(" ")
     for e in s:
       if e.name == bits[0] and bits[1:] == map(lambda (a,t): a, e.ground_args):
         return True
     return False
   def select_next_state(self):
-    return self.next_states[0]
+    init = {}
+    for prim in self._P.init.args:
+      if not prim.predicate.name in init :
+        init[prim.predicate.name]=[]
+      init[prim.predicate.name].append(prim.predicate)
+    counts = []
+    for s in self.next_states:
+      counts.append( count_gp_in_ps(s, init))
+    self._next_state=self.next_states[counts.index(max(counts))]
 
 class InitialisingStateManager(VariableValuator):
   def __init__(self, frames):
@@ -105,7 +125,8 @@ class InitialisingStateManager(VariableValuator):
   def get_multi_var_value(self, v):
     frame = self.frames[v]
     return frame.default_v
-
+  def select_next_state(self):
+    pass
 def parse_background_knowledge(domain_fn, background_knowledge_fn):
   return parser.Problem(domain_fn, background_knowledge_fn)
 
@@ -154,20 +175,30 @@ def add_boolean_value_to_state(P, name, value):
 def add_multi_value_to_state(P, value):
   P.init.args.append(make_proposition(P, value))
 
+def add_value_to_state(P, frame, value_getter):
+  if isinstance (frame, BooleanValueFrame):
+    boolean_getter = getattr(value_getter, "get_bool_var_value")
+    add_boolean_value_to_state(P, frame.name, boolean_getter(frame.name))
+  elif isinstance (frame, MultiValueFrame):
+    multi_getter = getattr(value_getter, "get_multi_var_value")
+    add_multi_value_to_state(P, multi_getter(frame.name))
+  else :
+    print ("WARNING: unknown variable type ", frame.__class__)
+  
+
 def complete_state_description(P, state_frames, state_manager, internal_state_progressor):
   proposition_source_map={"parameters": state_manager,
                           "interaction_manager": state_manager,
                           "planner":internal_state_progressor}
   for frame in state_frames :
-    value_getter=proposition_source_map[frame.source]
-    if isinstance (frame, BooleanValueFrame):
-      boolean_getter = getattr(value_getter, "get_bool_var_value")
-      add_boolean_value_to_state(P, frame.name, boolean_getter(frame.name))
-    elif isinstance (frame, MultiValueFrame):
-      multi_getter = getattr(value_getter, "get_multi_var_value")
-      add_multi_value_to_state(P, multi_getter(frame.name))
-    else :
-      print ("WARNING: unknown variable type ", frame.__class__)
+    if not frame.source=="planner":
+      value_getter=proposition_source_map[frame.source]
+      add_value_to_state(P, frame, value_getter)
+  proposition_source_map["planner"].select_next_state()
+  for frame in state_frames :
+    if frame.source=="planner":
+      value_getter=proposition_source_map[frame.source]
+      add_value_to_state(P, frame, value_getter)
 
 def get_state_manager(is_ros, frames):
   sm=None
