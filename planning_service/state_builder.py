@@ -21,6 +21,9 @@ class MultiValueFrame(StateValueFrame):
 class BooleanValueFrame(StateValueFrame):
   def __init__(self,name, default_v,source):
     super(BooleanValueFrame, self).__init__(name,default_v,(False,True), source)
+class BooleanGeneratorFrame(BooleanValueFrame):
+  def __init__(self,name, default_v,source):
+    super(BooleanValueFrame, self).__init__(name,default_v,(False,True), source)
 
 class VariableValuator(object):
   def get_bool_var_value(self, v):
@@ -112,9 +115,20 @@ class InternalStateManager(VariableValuator):
         init[prim.predicate.name]=[]
       init[prim.predicate.name].append(prim.predicate)
     counts = []
+    self.next_states.sort(key=lambda x: len(x))
     for s in self.next_states:
       counts.append( count_gp_in_ps(s, init))
     self._next_state=self.next_states[counts.index(max(counts))]
+
+  def generate_values_in_state(self, v):
+    s = self._next_state
+    bits = v.split(" ")
+    assert len(bits)==1
+    vz=[]
+    for e in s:
+      if e.name == bits[0]:
+        vz.append(e)
+    return vz
 
 class InitialisingStateManager(VariableValuator):
   def __init__(self, frames):
@@ -127,6 +141,7 @@ class InitialisingStateManager(VariableValuator):
     return frame.default_v
   def select_next_state(self):
     pass
+  def generate_values_in_state(self, v): return []
 def parse_background_knowledge(domain_fn, background_knowledge_fn):
   return parser.Problem(domain_fn, background_knowledge_fn)
 
@@ -161,6 +176,10 @@ def parse_state_frame(sffn):
       mv_values_map = source_vars["multi_vars_values"]
       for (multi_k, multi_v) in source_vars["multi_vars"].items():
         frames.append(MultiValueFrame(multi_k, multi_v, mv_values_map[multi_k], source))
+        
+    if "state_generators" in source_vars:
+      for (bool_t_k, bool_v) in source_vars["state_generators"].items():
+        frames.append(BooleanGeneratorFrame(bool_t_k, str(bool_v).lower()=="true", source))
   return frames
 
 def make_proposition(P, value):
@@ -176,7 +195,11 @@ def add_multi_value_to_state(P, value):
   P.init.args.append(make_proposition(P, value))
 
 def add_value_to_state(P, frame, value_getter):
-  if isinstance (frame, BooleanValueFrame):
+  if isinstance (frame, BooleanGeneratorFrame):
+    generator_getter = getattr(value_getter, "generate_values_in_state")
+    for v in generator_getter(frame.name):
+      add_boolean_value_to_state(P, v.name + " " + " ".join(map(lambda x: str(x[0]), v.ground_args)), True)
+  elif isinstance (frame, BooleanValueFrame):
     boolean_getter = getattr(value_getter, "get_bool_var_value")
     add_boolean_value_to_state(P, frame.name, boolean_getter(frame.name))
   elif isinstance (frame, MultiValueFrame):

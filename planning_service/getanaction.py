@@ -8,7 +8,7 @@ import os, sys, subprocess
 ############################################################################################################
 
 deadend_detection=False
-use_local_search=False
+use_local_search=True
 keep_files=False
 
 
