@@ -44,8 +44,46 @@
     (uselectedaction ?p - procstep)
     (todoidle ?p - procstep)
     (todo ?a - activity ?p - procstep)
+    (same ?a1 ?a2 - activity)
   )
     (:functions (total-cost) - number)
+  
+ ; (:action mitigation
+ ;   :parameters (?a - activity ?p - procstep)
+ ;   :precondition 
+ ;   (and
+ ;     (procstage ?p)
+ ;     (naustep)
+ ;     ;(not (done ?a))
+ ;     (activitycategory ?a ?t)
+ ;     (anxietymitigating ?t)
+ ;     (anxietytest ?p) 
+ ;     (not (okanxiety ?p))
+ ;   )
+ ;   :effect
+ ;   (and
+ ;     ;(done ?a)
+ ;     (not (naustep))
+ ;     (procedurestep)
+ ;     (increase (total-cost) 1)
+ ;   )
+ ; )
+  (:action mitigation
+    :parameters (?p - procstep)
+    :precondition 
+    (and
+      (procstage ?p)
+      (naustep)
+      (anxietytest ?p) 
+      (not (okanxiety ?p))
+    )
+    :effect
+    (and
+      (not (naustep))
+      (procedurestep)
+      (increase (total-cost) 1)
+    )
+  )
   
   (:action doactivity1a
     :parameters (?a - activity ?t - activitytype ?p - procstep ?x - level)
@@ -430,41 +468,39 @@
       (not (todoidle ?p))
       (not (naustep))
       (procedurestep)
-      (increase (total-cost) 20)
+      (increase (total-cost) 50)
     )
   )
-  (:action idle
+  (:action idle1
     :parameters (?p - procstep)
     :precondition 
     (and
       (procstage ?p)
       (naustep)
+      (not (anxietytest ?p))
+      (not (uselectedaction ?p))
     )
     :effect
     (and
       (not (naustep))
       (procedurestep)
-      (increase (total-cost) 100)
+      (increase (total-cost) 1000)
     )
   )
-    (:action mitigationactivity
-    :parameters (?a - activity ?t - activitytype ?p - procstep)
+  (:action idle2
+    :parameters (?p - procstep)
     :precondition 
     (and
       (procstage ?p)
       (naustep)
-      (not (done ?a))
-      (activitycategory ?a ?t)
-      (anxietymitigating ?t)
-      (anxietytest ?p) 
-      (not (okanxiety ?p))
+      (okanxiety ?p)
+      (not (uselectedaction ?p))
     )
     :effect
     (and
-      (done ?a)
       (not (naustep))
       (procedurestep)
-      (increase (total-cost) 10)
+      (increase (total-cost) 1000)
     )
   )
 
@@ -480,6 +516,7 @@
     :effect
     (and
       (not (procedurestep))
+      (increase (total-cost) 1)
       (oneof
         (and 
           (not (procstage ?p1))
@@ -504,6 +541,7 @@
     (and
       (naustep)
       (not (procedurestep))
+      (increase (total-cost) 1)
       (oneof
         (and 
           (not (procstage ?p1))
@@ -520,12 +558,16 @@
     (and
       (activitycategory ?a1 ?t1)
       (requiredcategory ?p ?t1)
+      (not (queried ?a1 ?p))
+      (not (uselectedaction ?p))
+      
+      (not (done ?a1))
     )
     :effect
     (and
-       
       (uselectedaction ?p)
       (todo ?a1 ?p)
+      (queried ?a1 ?p)
         
       (increase (total-cost) 50)
     )
@@ -538,6 +580,11 @@
       (not (queried ?a1 ?p))
       (not (queried ?a2 ?p))
       
+      (not (done ?a1))
+      (not (done ?a2))
+      
+      (not (same ?a1 ?a2))
+      
       (activitycategory ?a1 ?t1)
       (requiredcategory ?p ?t1)
       (activitycategory ?a2 ?t2)
@@ -545,6 +592,7 @@
     )
     :effect
     (and
+      (increase (total-cost) 1)
       (oneof
         (and ; user chooses ?a1
           (uselectedaction ?p)
@@ -581,6 +629,7 @@
     )
     :effect
     (and
+      (increase (total-cost) 1)
       (not (anxteststep))
       (naustep)
       (oneof (okanxiety ?p) (and ))

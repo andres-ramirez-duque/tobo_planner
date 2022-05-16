@@ -3,8 +3,10 @@
   (:objects 
 
     intro bye ivdescription song1 song2 dance1 dance2 leadmeditation taichi quiz - activity
+    ;mitigation1 mitigation2 - activity
     introstep preprocedure procedure debrief end - procstep
     distraction cognitivebehaviour proceduredescription intronau reward byenau - activitytype
+    ;mitigationaction - activitytype
     low medium high - level
   )
   (:init
@@ -15,10 +17,9 @@
     (stepproc procedure debrief)
     (stepproc debrief end)
 
-    (anxietymitigating cognitivebehaviour)
+    ;(anxietymitigating mitigationaction)
     
     (activitycategory ivdescription proceduredescription)
-    
 
     (activitycategory song1 distraction)
     (activitycategory song2 distraction)
@@ -29,6 +30,9 @@
     (activitycategory dance1 reward)
     (activitycategory dance2 reward)
     (activitycategory quiz distraction)
+    
+    ;(activitycategory mitigation1 mitigationaction)
+    ;(activitycategory mitigation2 mitigationaction)
 
     (activitycategory leadmeditation cognitivebehaviour)
     (activitycategory taichi cognitivebehaviour)
@@ -82,7 +86,19 @@
     (desiredstrength procedure high)
     (desiredstrength debrief medium)
     (desiredstrength end low)
-    
+   
+    (same intro intro)
+    (same bye bye)
+    (same ivdescription ivdescription)
+    (same song1 song1)
+    (same song2 song2)
+    (same dance1 dance1)
+    (same dance2 dance2)
+    (same leadmeditation leadmeditation)
+    (same taichi taichi)
+    (same quiz quiz)
+    ;(same mitigation1 mitigation1)
+    ;(same mitigation2 mitigation2)
   )
   (:goal
     (and

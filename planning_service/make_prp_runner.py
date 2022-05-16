@@ -10,7 +10,7 @@ def make_prp_runner(prp_root, solution_fn, deadend_detection, cmplan_abs_path, i
   
   
   
-  added_args_str = ""
+  added_args_str = " --jic-limit 30 --plan-with-policy 0"
   if not deadend_detection:
     added_args_str += " --detect-deadends 0 --generalize-deadends 0 --online-deadends 0"
   if not use_local_search:

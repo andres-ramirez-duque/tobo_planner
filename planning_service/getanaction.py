@@ -7,7 +7,7 @@ import os, sys, subprocess
 ### defaults 
 ############################################################################################################
 
-deadend_detection=False
+deadend_detection=True
 use_local_search=True
 keep_files=False
 

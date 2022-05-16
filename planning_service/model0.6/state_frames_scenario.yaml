@@ -31,9 +31,8 @@ planner:
         done leadmeditation:      false
         done taichi:              false
         done quiz:                false
-        done idle1:               false
-        done idle2:               false
-        done idle3:               false
+        #done mitigation1:         false
+        #done mitigation2:         false
 
     multi_vars:
         episode_step:             'naustep'
