@@ -48,42 +48,42 @@
   )
     (:functions (total-cost) - number)
   
- ; (:action mitigation
- ;   :parameters (?a - activity ?p - procstep)
- ;   :precondition 
- ;   (and
- ;     (procstage ?p)
- ;     (naustep)
- ;     ;(not (done ?a))
- ;     (activitycategory ?a ?t)
- ;     (anxietymitigating ?t)
- ;     (anxietytest ?p) 
- ;     (not (okanxiety ?p))
- ;   )
- ;   :effect
- ;   (and
- ;     ;(done ?a)
- ;     (not (naustep))
- ;     (procedurestep)
- ;     (increase (total-cost) 1)
- ;   )
- ; )
   (:action mitigation
-    :parameters (?p - procstep)
+    :parameters (?a - activity ?t - activitytype ?p - procstep)
     :precondition 
     (and
       (procstage ?p)
       (naustep)
+      (not (done ?a))
+      (activitycategory ?a ?t)
+      (anxietymitigating ?t)
       (anxietytest ?p) 
       (not (okanxiety ?p))
     )
     :effect
     (and
+      (done ?a)
       (not (naustep))
       (procedurestep)
       (increase (total-cost) 1)
     )
   )
+ ; (:action mitigation
+ ;   :parameters (?p - procstep)
+ ;   :precondition 
+ ;   (and
+ ;     (procstage ?p)
+ ;     (naustep)
+ ;     (anxietytest ?p) 
+ ;     (not (okanxiety ?p))
+ ;   )
+ ;   :effect
+ ;   (and
+ ;     (not (naustep))
+ ;     (procedurestep)
+ ;     (increase (total-cost) 1)
+ ;   )
+ ; )
   
   (:action doactivity1a
     :parameters (?a - activity ?t - activitytype ?p - procstep ?x - level)
@@ -471,29 +471,12 @@
       (increase (total-cost) 50)
     )
   )
-  (:action idle1
+  (:action idle
     :parameters (?p - procstep)
     :precondition 
     (and
       (procstage ?p)
       (naustep)
-      (not (anxietytest ?p))
-      (not (uselectedaction ?p))
-    )
-    :effect
-    (and
-      (not (naustep))
-      (procedurestep)
-      (increase (total-cost) 1000)
-    )
-  )
-  (:action idle2
-    :parameters (?p - procstep)
-    :precondition 
-    (and
-      (procstage ?p)
-      (naustep)
-      (okanxiety ?p)
       (not (uselectedaction ?p))
     )
     :effect

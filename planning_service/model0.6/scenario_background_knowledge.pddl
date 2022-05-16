@@ -2,11 +2,9 @@
   (:domain ivplacementsensing)
   (:objects 
 
-    intro bye ivdescription song1 song2 dance1 dance2 leadmeditation taichi quiz - activity
-    ;mitigation1 mitigation2 - activity
+    intro bye ivdescription song1 song2 dance1 dance2 leadmeditation taichi quiz mitigation1 mitigation2 - activity
     introstep preprocedure procedure debrief end - procstep
-    distraction cognitivebehaviour proceduredescription intronau reward byenau - activitytype
-    ;mitigationaction - activitytype
+    distraction cognitivebehaviour proceduredescription intronau reward byenau mitigationaction - activitytype
     low medium high - level
   )
   (:init
@@ -17,7 +15,7 @@
     (stepproc procedure debrief)
     (stepproc debrief end)
 
-    ;(anxietymitigating mitigationaction)
+    (anxietymitigating mitigationaction)
     
     (activitycategory ivdescription proceduredescription)
 
@@ -31,8 +29,8 @@
     (activitycategory dance2 reward)
     (activitycategory quiz distraction)
     
-    ;(activitycategory mitigation1 mitigationaction)
-    ;(activitycategory mitigation2 mitigationaction)
+    (activitycategory mitigation1 mitigationaction)
+    (activitycategory mitigation2 mitigationaction)
 
     (activitycategory leadmeditation cognitivebehaviour)
     (activitycategory taichi cognitivebehaviour)
@@ -97,8 +95,8 @@
     (same leadmeditation leadmeditation)
     (same taichi taichi)
     (same quiz quiz)
-    ;(same mitigation1 mitigation1)
-    ;(same mitigation2 mitigation2)
+    (same mitigation1 mitigation1)
+    (same mitigation2 mitigation2)
   )
   (:goal
     (and
