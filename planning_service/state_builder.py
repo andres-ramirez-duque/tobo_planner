@@ -48,6 +48,9 @@ class DummyStateManagerProxy(StateManagerProxy):
   def get_var_value(self, v):
     frame = self.frames[v]
     return self._dsm.request_feature_value(frame.name, frame.values)
+  def generate_values_in_state(self, v):
+    return self._dsm.request_value_generator(v)
+    
   def get_last_executed_action(self):
     return self._dsm.request_value("which was the last executed action?")
   def get_previous_action(self):
@@ -127,7 +130,8 @@ class InternalStateManager(VariableValuator):
     vz=[]
     for e in s:
       if e.name == bits[0]:
-        vz.append(e)
+        ps = e.name + " " + " ".join(map(lambda x: str(x[0]), e.ground_args))
+        vz.append(ps)
     return vz
 
 class InitialisingStateManager(VariableValuator):
@@ -198,7 +202,7 @@ def add_value_to_state(P, frame, value_getter):
   if isinstance (frame, BooleanGeneratorFrame):
     generator_getter = getattr(value_getter, "generate_values_in_state")
     for v in generator_getter(frame.name):
-      add_boolean_value_to_state(P, v.name + " " + " ".join(map(lambda x: str(x[0]), v.ground_args)), True)
+      add_boolean_value_to_state(P, v, True)
   elif isinstance (frame, BooleanValueFrame):
     boolean_getter = getattr(value_getter, "get_bool_var_value")
     add_boolean_value_to_state(P, frame.name, boolean_getter(frame.name))
