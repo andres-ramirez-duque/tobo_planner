@@ -36,8 +36,9 @@ planner:
         done leadmeditation:      false
         done taichi:              false
         done quiz:                false
-        anxietytest preprocedure: false
-        anxietytest procedure:    false
+        anxietytest preprocedure: true
+        anxietytest procedure:    true
+        requiresmitigation:       false
         #done mitigation1:         false
         #done mitigation2:         false
 

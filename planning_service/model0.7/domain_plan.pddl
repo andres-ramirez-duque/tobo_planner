@@ -37,6 +37,8 @@
     (distractionstrengthyoung ?a - activity ?l - level)
     (distractionstrengthold ?a - activity ?l - level)
     (desiredstrength ?p - procstep ?l - level)
+    (desiredstrengthmitigate ?p - procstep ?l - level)
+    (requiresmitigation)
     
     (isyoungerchild)
     
@@ -68,6 +70,7 @@
  ;     (increase (total-cost) 1)
  ;   )
  ; )
+ 
   (:action mitigation
     :parameters (?p - procstep)
     :precondition 
@@ -76,16 +79,34 @@
       (naustep)
       (anxietytest ?p) 
       (not (okanxiety ?p))
+      (not (requiresmitigation))
     )
     :effect
     (and
-      (not (naustep))
-      (procedurestep)
+      (requiresmitigation)
       (not (anxietytest ?p))
       (increase (total-cost) 1)
     )
   )
   
+  ; (:action mitigation
+ ;   :parameters (?p - procstep)
+ ;   :precondition 
+ ;   (and
+ ;     (procstage ?p)
+ ;     (naustep)
+ ;     (anxietytest ?p) 
+ ;     (not (okanxiety ?p))
+ ;   )
+ ;   :effect
+ ;   (and
+ ;     (not (naustep))
+ ;     (procedurestep)
+ ;     (not (anxietytest ?p))
+ ;     (increase (total-cost) 1)
+ ;   )
+ ; ) 
+ 
   (:action doactivity1a
     :parameters (?a - activity ?t - activitytype ?p - procstep ?x - level)
     :precondition 
@@ -97,7 +118,7 @@
       (requiredcategory ?p ?t)
       
       (not (anxietytest ?p))
-      
+      (not (requiresmitigation))
       (distractionstrengthyoung ?a ?x)
       (desiredstrength ?p ?x)
       
@@ -116,6 +137,7 @@
       (increase (total-cost) 1)
     )
   )
+  
   (:action doactivity2a
     :parameters (?a - activity ?t - activitytype ?p - procstep ?x - level)
     :precondition 
@@ -125,7 +147,7 @@
       (not (done ?a))
       (activitycategory ?a ?t)
       (requiredcategory ?p ?t)
-      
+      (not (requiresmitigation))
       (okanxiety ?p)
       
       (distractionstrengthyoung ?a ?x)
@@ -155,7 +177,7 @@
       (not (done ?a))
       (activitycategory ?a ?t)
       (requiredcategory ?p ?t)
-      
+      (not (requiresmitigation))
       (not (anxietytest ?p))
       
       (distractionstrengthyoung ?a ?x)
@@ -186,7 +208,7 @@
       (not (done ?a))
       (activitycategory ?a ?t)
       (requiredcategory ?p ?t)
-      
+      (not (requiresmitigation))
       (okanxiety ?p)
       
       (distractionstrengthyoung ?a ?x)
@@ -217,7 +239,7 @@
       (not (done ?a))
       (activitycategory ?a ?t)
       (requiredcategory ?p ?t)
-      
+      (not (requiresmitigation))
       (not (anxietytest ?p))
       
       (distractionstrengthyoung ?a ?x)
@@ -247,7 +269,7 @@
       (not (done ?a))
       (activitycategory ?a ?t)
       (requiredcategory ?p ?t)
-      
+      (not (requiresmitigation))
       (okanxiety ?p)
       
       (distractionstrengthyoung ?a ?x)
@@ -278,7 +300,7 @@
       (not (done ?a))
       (activitycategory ?a ?t)
       (requiredcategory ?p ?t)
-      
+      (not (requiresmitigation))
       (not (anxietytest ?p))
       
       (distractionstrengthold ?a ?x)
@@ -308,7 +330,7 @@
       (not (done ?a))
       (activitycategory ?a ?t)
       (requiredcategory ?p ?t)
-      
+      (not (requiresmitigation))
       (okanxiety ?p)
       
       (distractionstrengthold ?a ?x)
@@ -338,7 +360,7 @@
       (not (done ?a))
       (activitycategory ?a ?t)
       (requiredcategory ?p ?t)
-      
+      (not (requiresmitigation))
       (not (anxietytest ?p))
       
       (distractionstrengthold ?a ?x)
@@ -371,7 +393,7 @@
       (requiredcategory ?p ?t)
       
       (okanxiety ?p)
-      
+      (not (requiresmitigation))
       (distractionstrengthold ?a ?x)
       (desiredstrength ?p ?y)
       (similar ?x ?y)
@@ -402,7 +424,7 @@
       (requiredcategory ?p ?t)
       
       (not (anxietytest ?p))
-      
+      (not (requiresmitigation))
       (distractionstrengthold ?a ?x)
       (desiredstrength ?p ?y)
       
@@ -430,7 +452,7 @@
       (not (done ?a))
       (activitycategory ?a ?t)
       (requiredcategory ?p ?t)
-      
+      (not (requiresmitigation))
       (okanxiety ?p)
       
       (distractionstrengthold ?a ?x)
@@ -451,6 +473,424 @@
       (increase (total-cost) 10)
     )
   )
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+    (:action doactivitym1a
+    :parameters (?a - activity ?t - activitytype ?p - procstep ?x - level)
+    :precondition 
+    (and
+      (procstage ?p)
+      (naustep)
+      (not (done ?a))
+      (activitycategory ?a ?t)
+      (requiredcategory ?p ?t)
+      
+      (not (anxietytest ?p))
+      
+      (distractionstrengthyoung ?a ?x)
+      (desiredstrengthmitigate ?p ?x)
+      (requiresmitigation)
+      
+      (isyoungerchild)
+      
+      (uselectedaction ?p)
+      (todo ?a ?p)
+    )
+    :effect
+    (and
+      (not (requiresmitigation))
+      (done ?a)
+      (not (naustep))
+      (procedurestep)
+      (not (uselectedaction ?p))
+      (not (todo ?a ?p))
+      (increase (total-cost) 1)
+    )
+  )
+  (:action doactivitym2a
+    :parameters (?a - activity ?t - activitytype ?p - procstep ?x - level)
+    :precondition 
+    (and
+      (procstage ?p)
+      (naustep)
+      (not (done ?a))
+      (activitycategory ?a ?t)
+      (requiredcategory ?p ?t)
+      
+      (okanxiety ?p)
+      
+      (distractionstrengthyoung ?a ?x)
+      (desiredstrengthmitigate ?p ?x)
+      (requiresmitigation)
+      
+      (isyoungerchild)
+      
+      (uselectedaction ?p)
+      (todo ?a ?p)
+    )
+    :effect
+    (and
+      (not (requiresmitigation))
+      (done ?a)
+      (not (naustep))
+      (procedurestep)
+      (not (uselectedaction ?p))
+      (not (todo ?a ?p))
+      (increase (total-cost) 1)
+    )
+  )
+    (:action doactivitym1b
+    :parameters (?a - activity ?t - activitytype ?p - procstep ?x ?y - level)
+    :precondition 
+    (and
+      (procstage ?p)
+      (naustep)
+      (not (done ?a))
+      (activitycategory ?a ?t)
+      (requiredcategory ?p ?t)
+      
+      (not (anxietytest ?p))
+      
+      (distractionstrengthyoung ?a ?x)
+      (desiredstrengthmitigate ?p ?y)
+      (requiresmitigation)
+      (similar ?x ?y)
+      
+      (isyoungerchild)
+      
+      (uselectedaction ?p)
+      (todo ?a ?p)
+    )
+    :effect
+    (and
+      (not (requiresmitigation))
+      (done ?a)
+      (not (naustep))
+      (procedurestep)
+      (not (uselectedaction ?p))
+      (not (todo ?a ?p))
+      (increase (total-cost) 5)
+    )
+  )
+  (:action doactivitym2b
+    :parameters (?a - activity ?t - activitytype ?p - procstep ?x ?y - level)
+    :precondition 
+    (and
+      (procstage ?p)
+      (naustep)
+      (not (done ?a))
+      (activitycategory ?a ?t)
+      (requiredcategory ?p ?t)
+      
+      (okanxiety ?p)
+      
+      (distractionstrengthyoung ?a ?x)
+      (desiredstrengthmitigate ?p ?y)
+      (requiresmitigation)
+      (similar ?x ?y)
+      
+      (isyoungerchild)
+      
+      (uselectedaction ?p)
+      (todo ?a ?p)
+    )
+    :effect
+    (and
+      (not (requiresmitigation))
+      (done ?a)
+      (not (naustep))
+      (procedurestep)
+      (not (uselectedaction ?p))
+      (not (todo ?a ?p))
+      (increase (total-cost) 5)
+    )
+  )
+    (:action doactivitym1c
+    :parameters (?a - activity ?t - activitytype ?p - procstep ?x ?y - level)
+    :precondition 
+    (and
+      (procstage ?p)
+      (naustep)
+      (not (done ?a))
+      (activitycategory ?a ?t)
+      (requiredcategory ?p ?t)
+      
+      (not (anxietytest ?p))
+      
+      (distractionstrengthyoung ?a ?x)
+      (desiredstrengthmitigate ?p ?y)
+      (requiresmitigation)
+      
+      (isyoungerchild)
+      
+      (uselectedaction ?p)
+      (todo ?a ?p)
+    )
+    :effect
+    (and
+      (not (requiresmitigation))
+      (done ?a)
+      (not (naustep))
+      (procedurestep)
+      (not (uselectedaction ?p))
+      (not (todo ?a ?p))
+      (increase (total-cost) 10)
+    )
+  )
+  (:action doactivitym2c
+    :parameters (?a - activity ?t - activitytype ?p - procstep ?x ?y - level)
+    :precondition 
+    (and
+      (procstage ?p)
+      (naustep)
+      (not (done ?a))
+      (activitycategory ?a ?t)
+      (requiredcategory ?p ?t)
+      
+      (okanxiety ?p)
+      
+      (distractionstrengthyoung ?a ?x)
+      (desiredstrengthmitigate ?p ?y)
+      (requiresmitigation)
+
+      (isyoungerchild)
+
+      (uselectedaction ?p)
+      (todo ?a ?p)
+    )
+    :effect
+    (and
+      (not (requiresmitigation))
+      (done ?a)
+      (not (naustep))
+      (procedurestep)
+      (not (uselectedaction ?p))
+      (not (todo ?a ?p))
+      (increase (total-cost) 10)
+    )
+  )
+  
+    (:action doactivitym1aold
+    :parameters (?a - activity ?t - activitytype ?p - procstep ?x - level)
+    :precondition 
+    (and
+      (procstage ?p)
+      (naustep)
+      (not (done ?a))
+      (activitycategory ?a ?t)
+      (requiredcategory ?p ?t)
+      
+      (not (anxietytest ?p))
+      
+      (distractionstrengthold ?a ?x)
+      (desiredstrengthmitigate ?p ?x)
+      (requiresmitigation)
+      
+      (not (isyoungerchild))
+      
+      (uselectedaction ?p)
+      (todo ?a ?p)
+    )
+    :effect
+    (and
+      (not (requiresmitigation))
+      (done ?a)
+      (not (naustep))
+      (procedurestep)
+      (not (uselectedaction ?p))
+      (not (todo ?a ?p))
+      (increase (total-cost) 1)
+    )
+  )
+  (:action doactivitym2aold
+    :parameters (?a - activity ?t - activitytype ?p - procstep ?x - level)
+    :precondition 
+    (and
+      (procstage ?p)
+      (naustep)
+      (not (done ?a))
+      (activitycategory ?a ?t)
+      (requiredcategory ?p ?t)
+      
+      (okanxiety ?p)
+      
+      (distractionstrengthold ?a ?x)
+      (desiredstrengthmitigate ?p ?x)
+      (requiresmitigation)
+      
+      (not (isyoungerchild))
+      
+      (uselectedaction ?p)
+      (todo ?a ?p)
+    )
+    :effect
+    (and
+      (not (requiresmitigation))
+      (done ?a)
+      (not (naustep))
+      (procedurestep)
+      (not (uselectedaction ?p))
+      (not (todo ?a ?p))
+      (increase (total-cost) 1)
+    )
+  )
+    (:action doactivitym1bold
+    :parameters (?a - activity ?t - activitytype ?p - procstep ?x ?y - level)
+    :precondition 
+    (and
+      (procstage ?p)
+      (naustep)
+      (not (done ?a))
+      (activitycategory ?a ?t)
+      (requiredcategory ?p ?t)
+      
+      (not (anxietytest ?p))
+      
+      (distractionstrengthold ?a ?x)
+      (desiredstrengthmitigate ?p ?y)
+      (requiresmitigation)
+      (similar ?x ?y)
+      
+      (not (isyoungerchild))
+      
+      (uselectedaction ?p)
+      (todo ?a ?p)
+    )
+    :effect
+    (and
+      (not (requiresmitigation))
+      (done ?a)
+      (not (naustep))
+      (procedurestep)
+      (not (uselectedaction ?p))
+      (not (todo ?a ?p))
+      (increase (total-cost) 5)
+    )
+  )
+  (:action doactivitym2bold
+    :parameters (?a - activity ?t - activitytype ?p - procstep ?x ?y - level)
+    :precondition 
+    (and
+      (procstage ?p)
+      (naustep)
+      (not (done ?a))
+      (activitycategory ?a ?t)
+      (requiredcategory ?p ?t)
+      
+      (okanxiety ?p)
+      
+      (distractionstrengthold ?a ?x)
+      (desiredstrengthmitigate ?p ?y)
+      (requiresmitigation)
+      (similar ?x ?y)
+      
+      (not (isyoungerchild))
+      
+      (uselectedaction ?p)
+      (todo ?a ?p)
+    )
+    :effect
+    (and
+      (not (requiresmitigation))
+      (done ?a)
+      (not (naustep))
+      (procedurestep)
+      (not (uselectedaction ?p))
+      (not (todo ?a ?p))
+      (increase (total-cost) 5)
+    )
+  )
+    (:action doactivitym1cold
+    :parameters (?a - activity ?t - activitytype ?p - procstep ?x ?y - level)
+    :precondition 
+    (and
+      (procstage ?p)
+      (naustep)
+      (not (done ?a))
+      (activitycategory ?a ?t)
+      (requiredcategory ?p ?t)
+      
+      (not (anxietytest ?p))
+      
+      (distractionstrengthold ?a ?x)
+      (desiredstrengthmitigate ?p ?y)
+      (requiresmitigation)
+      
+      (not (isyoungerchild))
+      
+      (uselectedaction ?p)
+      (todo ?a ?p)
+    )
+    :effect
+    (and
+      (not (requiresmitigation))
+      (done ?a)
+      (not (naustep))
+      (procedurestep)
+      (not (uselectedaction ?p))
+      (not (todo ?a ?p))
+      (increase (total-cost) 10)
+    )
+  )
+  (:action doactivityms2old
+    :parameters (?a - activity ?t - activitytype ?p - procstep ?x ?y - level)
+    :precondition 
+    (and
+      (procstage ?p)
+      (naustep)
+      (not (done ?a))
+      (activitycategory ?a ?t)
+      (requiredcategory ?p ?t)
+      
+      (okanxiety ?p)
+      
+      (distractionstrengthold ?a ?x)
+      (desiredstrengthmitigate ?p ?y)
+      (requiresmitigation)
+      
+      (not (isyoungerchild))
+      
+      (uselectedaction ?p)
+      (todo ?a ?p)
+    )
+    :effect
+    (and
+      (done ?a)
+      (not (naustep))
+      (procedurestep)
+      (not (uselectedaction ?p))
+      (not (todo ?a ?p))
+      (not (requiresmitigation))
+      (increase (total-cost) 10)
+    )
+  )
+
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
   
   
   
@@ -553,6 +993,7 @@
     )
   )
 
+
   (:action bypassactivityprefq
   :parameters (?a1 - activity ?t1 - activitytype ?p - procstep)
     :precondition 
@@ -597,7 +1038,7 @@
     (and
       (increase (total-cost) 1)
       (oneof
-        (oneof
+        ;(oneof
          (and ; user chooses ?a1
           (uselectedaction ?p)
           (todo ?a1 ?p)
@@ -610,16 +1051,16 @@
           (queried ?a1 ?p)
           (queried ?a2 ?p)
          )
-        )
-       (oneof
-        (and ; disengaged from question
-          (uselectedaction ?p)
-          (todoidle ?p)
-          (queried ?a1 ?p)
-          (queried ?a2 ?p)
-        )
-        (and ) ; didn't understand response
-       )
+        ;)
+       ;(oneof
+       ; (and ; disengaged from question
+       ;   (uselectedaction ?p)
+       ;   (todoidle ?p)
+       ;   (queried ?a1 ?p)
+       ;   (queried ?a2 ?p)
+       ; )
+       ; (and ) ; didn't understand response
+       ;)
       )
     )
   )

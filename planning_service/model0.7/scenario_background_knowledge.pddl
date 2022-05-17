@@ -2,12 +2,12 @@
   (:domain ivplacementsensing)
   (:objects 
 
-    intro bye ivdescription song1 song2 dance1 dance2 leadmeditation taichi quiz - activity
+    intro bye ivdescription song1 song2 dance1 dance2 leadmeditation taichi quiz magic - activity
     ;mitigation1 mitigation2 - activity
     introstep preprocedure procedure debrief end - procstep
     distraction cognitivebehaviour proceduredescription intronau reward byenau - activitytype
     ;mitigationaction - activitytype
-    low medium high - level
+    low medium high vhigh - level
   )
   (:init
     
@@ -30,6 +30,7 @@
     (activitycategory dance1 reward)
     (activitycategory dance2 reward)
     (activitycategory quiz distraction)
+    (activitycategory magic distraction)
     
     ;(activitycategory mitigation1 mitigationaction)
     ;(activitycategory mitigation2 mitigationaction)
@@ -47,8 +48,8 @@
     (requiredcategory debrief reward)
     (requiredcategory end byenau)
         
-    (anxietytest preprocedure)
-    (anxietytest procedure)
+;    (anxietytest preprocedure)
+;    (anxietytest procedure)
     
     (similar low low)
     (similar low medium)
@@ -57,6 +58,9 @@
     (similar high high)
     (similar high medium)
     (similar medium high)
+    (similar vhigh vhigh)
+    (similar vhigh high)
+    (similar high vhigh)
     
     ;; young
     (distractionstrengthyoung song1 high)
@@ -69,6 +73,7 @@
     (distractionstrengthyoung intro medium)
     (distractionstrengthyoung bye low)
     (distractionstrengthyoung ivdescription low)
+    (distractionstrengthyoung magic vhigh)
     
     ;; old
     (distractionstrengthold song1 medium)
@@ -81,12 +86,19 @@
     (distractionstrengthold intro medium)
     (distractionstrengthold bye low)
     (distractionstrengthold ivdescription high)
+    (distractionstrengthold magic vhigh)
     
     (desiredstrength introstep low)
     (desiredstrength preprocedure high)
     (desiredstrength procedure high)
     (desiredstrength debrief medium)
     (desiredstrength end low)
+    
+    (desiredstrengthmitigate introstep medium)
+    (desiredstrengthmitigate preprocedure vhigh)
+    (desiredstrengthmitigate procedure vhigh)
+    (desiredstrengthmitigate debrief high)
+    (desiredstrengthmitigate end medium)
    
     (same intro intro)
     (same bye bye)
@@ -98,6 +110,7 @@
     (same leadmeditation leadmeditation)
     (same taichi taichi)
     (same quiz quiz)
+    (same magic magic)
     ;(same mitigation1 mitigation1)
     ;(same mitigation2 mitigation2)
   )
