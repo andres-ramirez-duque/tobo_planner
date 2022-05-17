@@ -589,32 +589,36 @@
       (requiredcategory ?p ?t1)
       (activitycategory ?a2 ?t2)
       (requiredcategory ?p ?t2)
+      
+      (not (uselectedaction ?p))
     )
     :effect
     (and
       (increase (total-cost) 1)
       (oneof
-        (and ; user chooses ?a1
+        (oneof
+         (and ; user chooses ?a1
           (uselectedaction ?p)
           (todo ?a1 ?p)
           (queried ?a1 ?p)
           (queried ?a2 ?p)
-        )
-        (and ; user chooses ?a2
+         )
+         (and ; user chooses ?a2
           (uselectedaction ?p)
           (todo ?a2 ?p)
           (queried ?a1 ?p)
           (queried ?a2 ?p)
+         )
         )
-        (and ; didn't understand response
-
-        )
+       (oneof
         (and ; disengaged from question
           (uselectedaction ?p)
           (todoidle ?p)
           (queried ?a1 ?p)
           (queried ?a2 ?p)
         )
+        (and ) ; didn't understand response
+       )
       )
     )
   )
