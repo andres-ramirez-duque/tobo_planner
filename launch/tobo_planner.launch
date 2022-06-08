@@ -14,6 +14,9 @@
 
   <node pkg="tobo_planner" type="getanaction_service.py" name="get_an_action_service" output="screen">
   </node>
+  
+  <node pkg="tobo_planner" type="int_manager.py" name="int_manager" output="screen">
+  </node>
 
 </launch>
 

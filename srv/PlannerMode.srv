@@ -1,3 +1,4 @@
 string planner_mode
+int32 plan_step
 ---
 int64 planner_ok

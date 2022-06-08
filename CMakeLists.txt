@@ -13,6 +13,7 @@ find_package(catkin REQUIRED COMPONENTS
   rospy
   sensor_msgs
   std_msgs
+  diagnostic_msgs
   message_generation
 )
 
@@ -50,11 +51,11 @@ find_package(catkin REQUIRED COMPONENTS
 ##   * add every package in MSG_DEP_SET to generate_messages(DEPENDENCIES ...)
 
 ## Generate messages in the 'msg' folder
-# add_message_files(
-#   FILES
-#   Message1.msg
-#   Message2.msg
-# )
+add_message_files(
+   FILES
+   action_chain.msg
+   web_chain.msg
+)
 
 ## Generate services in the 'srv' folder
 add_service_files(
@@ -73,7 +74,7 @@ add_service_files(
 ## Generate added messages and services with any dependencies listed here
 generate_messages(
    DEPENDENCIES
-   geometry_msgs   sensor_msgs   std_msgs
+   geometry_msgs   sensor_msgs   std_msgs   diagnostic_msgs
 )
 
 ################################################
@@ -164,6 +165,7 @@ target_link_libraries(sensortransition_server
 ## in contrast to setup.py, you can choose the destination
 catkin_install_python(PROGRAMS
    planning_service/getanaction_service.py
+   planning_service/int_manager.py
    DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
 )
 

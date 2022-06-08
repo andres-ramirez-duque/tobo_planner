@@ -1,6 +1,15 @@
+#!/usr/bin/env python
 import logging
 import threading
 import time
+import rospy
+
+from std_msgs.msg import String
+from tobo_planner.msg import action_chain
+from tobo_planner.msg import web_chain
+from tobo_planner.srv import PlannerMode,PlannerModeResponse
+from naoqi_bridge_msgs.srv import SetString
+
 
 
 LOG=True
@@ -74,21 +83,39 @@ class MessageGiver(Timer):
   def _trigger(self, args):
     apply(self.s, (self.m, args))
 
-class WebServer(MessageGiver):
+class DummyWebServer(MessageGiver):
   def __init__(self, t, s):
-    super(WebServer, self).__init__(t, s, None)
+    super(DummyWebServer, self).__init__(t, s, None)
     self.web_server_status = web_server_status_enum.idle
   
-  def ask_for_user_input(self, options, default, args = (1,)):
+  def ask_for_user_input(self, options, default, timeout=10, args = (1,)):
     self.m = default
     self.start(args)
   
   def disable_user_input(self, m):
     pass
 
-class Planner(Timer):
+class WebServer(object):
+  def __init__(self, s):
+    self.web_chain_sub = rospy.Subscriber("/request",web_chain,s)    
+    self.web_chain_pub = rospy.Publisher('/listener_req', web_chain, queue_size=10)
+  
+  def ask_for_user_input(self, options, default, timeout=10, args = (1,)):
+    obj, label, indx = key_deconstruct(args[0])
+    msg = web_chain()
+    msg.plan_step = indx
+    msg.request_type = label
+    msg.parameters = options
+    msg.duration = timeout #XXX self.op_timeout["progressprocstep"]
+    self.web_chain_pub.publish(msg)
+    
+  
+  def disable_user_input(self, m):
+    pass
+
+class DummyPlanner(Timer):
   def __init__(self, t, s, steps):
-    super(Planner, self).__init__(t)
+    super(DummyPlanner, self).__init__(t)
     self.s=s
     self.steps = steps
     self.next_id = 0
@@ -101,6 +128,25 @@ class Planner(Timer):
   def is_active(self) :
     return not self.planner_status == planner_status_enum.idle
 
+class Planner(object):
+  def __init__(self, s):
+    self.action_sub = rospy.Subscriber("/next_action", action_chain, s)
+    self.next_id = 0
+    
+  def start(self, args):
+    print "%%%%%%%%%%%%% PASSING INTO PLANNER", args
+    k = key_deconstruct(args[0])
+    self.get_an_action_client("chicken", k[2])
+
+  def get_an_action_client(self, planner_mode,plan_step):
+    rospy.wait_for_service('get_an_action')
+    try:
+      get_an_action = rospy.ServiceProxy('get_an_action', PlannerMode)
+      resp = get_an_action(planner_mode,plan_step)
+      return resp.planner_ok
+    except rospy.ServiceException as e:
+      print("Service call failed: %s"%e)
+
 
 class service_provider(object):
   def __init__(self):
@@ -110,9 +156,9 @@ class service_provider(object):
   def request_action(self, tag):
     self._last_tag = tag
     self._request_action()
-  def ask_for_user_input(self, options, default, k):
+  def ask_for_user_input(self, options, default, timeout, k):
     self._last_tag = k
-    self._ask_for_user_input(options, default, k)
+    self._ask_for_user_input(options, default, timeout, k)
     
   def register_for_action_broadcast(self, callback):
     self.action_broadcast_f = callback
@@ -135,12 +181,18 @@ class dummy_ros_proxy(service_provider):
     self.web_server = WebServer(10, self.on_received_webserver_message)
   def _request_action(self):
     self.planner.start((self._last_tag,))
-  def _ask_for_user_input(self, options, default, k):
-    self.web_server.ask_for_user_input(options, default, (k,))
+  def _ask_for_user_input(self, options, default, timeout, k):
+    self.web_server.ask_for_user_input(options, default, timeout, (k,))
 
 class ros_proxy(service_provider):
   def __init__(self):
-    pass
+    super(ros_proxy, self).__init__()
+    self.planner = Planner(self.on_received_planner_action)
+    self.web_server = WebServer(self.on_received_webserver_message)
+  def _request_action(self):
+    self.planner.start((self._last_tag,))
+  def _ask_for_user_input(self, options, default, timeout, k):
+    self.web_server.ask_for_user_input(options, default, timeout, (k,))
 
   
 
@@ -164,31 +216,48 @@ class int_manager(object):
     
   def init_timeouts(self):
     self.op_timeout = {"progressprocstep": 10,
-                       "doactivity": 10
+                       "doactivity": 10,
+                       "anxietytest": 10,
+                       "idle": 10
                        }
 
-  def ask_user_progress_proc_step(self, options, default, k):
-    self.service_provider.ask_for_user_input(options, default, k)
+  def ask_user_progress_proc_step(self, options, default, timeout, k):
+    self.service_provider.ask_for_user_input(options, default, timeout, k)
 
-  def process_progress_proc_step_action(self, op, params):
+  def process_progress_proc_step_action(self, op, params,t):
     s1,s2 = params[0:2]
     default = s1
     label = "stage progression"
-    self.ask_user_progress_proc_step((s1,s2), s2, key_maker("web server",label, self.counter))
+    self.ask_user_progress_proc_step((s1,s2), s2, t, key_maker("web server",label, self.counter))
+    self.add_flag(label, default)
+
+  def process_anxiety_test(self, op, params, t):
+    s1 = params[0]
+    default = op+"_"+ s1
+    label = "anxiety test"
+    self.ask_user_progress_proc_step(("true","false"), "false", t, key_maker("web server",label, self.counter))
     self.add_flag(label, default)
 
   def process_do_activity_action(self, op, params):
     pass
 
-  def process_action_execution(self, message):
+  def process_action_execution(self, op, params):
+    self._current_action = self.reconstruct_action_str(op, params)
     self.set_status_if_in_one_of(manager_status_enum.executing, (manager_status_enum.planning,))
-    op,params = parse_action_str(message)
     if op.startswith("progressprocstep") :
-      self.process_progress_proc_step_action(op,params)
       t = self.op_timeout["progressprocstep"]
+      self.process_progress_proc_step_action(op,params,t)
     elif op.startswith("doactivity"):
       self.process_do_activity_action(op,params)
       t = self.op_timeout["doactivity"]
+    elif op.startswith("mitigationactivity"):
+      self.process_do_activity_action(op,params)
+      t = self.op_timeout["doactivity"]
+    elif op.startswith("idle"):
+      t = self.op_timeout["idle"]
+    elif op.startswith("anxietytest"):
+      t = self.op_timeout["anxietytest"]
+      self.process_anxiety_test(op,params, t)
     elif op.startswith("goal"):
       if not self.set_status_if_in_one_of(manager_status_enum.after, (manager_status_enum.executing,)):
         print "WARNING: goal achieved, but manager lost.."
@@ -198,17 +267,14 @@ class int_manager(object):
       return
     MessageGiver(t, self.on_timer_event, None).start((key_maker("manager","timeout",self.counter),))
     
-
-  def get_message(self, message, k): # a broadcast from the planner
-    obj, t, indx = key_deconstruct(k)
-    if t=="action request":
-      
-      if LOG:
-        print "++++ Received action: " + message
-
-      self.process_action_execution(message)
-    else:
-      print "WARNING: unknown message received:", obj, t, indx, "message: ", message
+  def reconstruct_action_str(self, op, params):
+    return op+"_"+"_".join(params)
+    
+  def get_message(self, action_message, dummy): # a broadcast from the planner
+    op = action_message.action_type 
+    params = action_message.parameters
+    indx = action_message.plan_step
+    self.process_action_execution(op, params)
 
   def add_flag(self, flag, default):
     self.active_requests_lock.acquire()
@@ -249,6 +315,9 @@ class int_manager(object):
     self.active_requests_lock.release()
   def _record_if_requests_completed(self):
     if len(self.active_requests) == 0:
+      path_to_stage_param="/parameters/last_executed_action" # maybe just a yaml parameter?
+      rospy.set_param(path_to_stage_param, self._current_action)
+      self._current_action=None
       self.set_status_if_in_one_of(manager_status_enum.idle, (manager_status_enum.executing,))
   
   def handle_disengagements(self, flag):
@@ -276,12 +345,16 @@ class int_manager(object):
         if LOG:
           print "Ignoring timeout - no longer executing.."
 
-  def webserver_message(self, message, k):
-    print k
-    obj, t, indx = key_deconstruct(k)
+  def webserver_message(self, web_message, dummy):
+    #print k
+    #obj, t, indx = key_deconstruct(k)
+    message = str(web_message.parameters[0])
+    t = web_message.request_type
+    indx = web_message.plan_step
+    
     if self.remove_request_if_active(t, indx):
       if LOG:
-        print "++++ On timer event: " + str(message) + " from: ", k
+        print "++++ On timer event: " + str(message)
       self.process_request_reply(t, message)
       self.record_if_requests_completed()
     else:
@@ -346,14 +419,22 @@ class int_manager(object):
 
   def init(self):
     self.set_status_if_in_one_of(manager_status_enum.idle, (manager_status_enum.before,))
-    self._start_action_chain_when_appropriate()
+    try:
+      self._start_action_chain_when_appropriate()
+    except rospy.exceptions.ROSInterruptException:
+      print("Shutting down")
     if LOG:
       print "=== Completed Int manager loop ====="
   
   
-plan = ("action:doactivity2bold_intro_intronau_introstep_medium_low","action:progressprocstep1_introstep_preprocedure","action:goal")
-im = int_manager(dummy_ros_proxy(plan))
-im.init()
+#plan = ("action:doactivity2bold_intro_intronau_introstep_medium_low","action:progressprocstep1_introstep_preprocedure","action:goal")
+#im = int_manager(dummy_ros_proxy(plan))
+#im.init()
+if __name__ == '__main__':
+  im = int_manager(ros_proxy())
+  rospy.init_node('ros_int_manager', anonymous=True)
+  im.init()
+
 
 
 
