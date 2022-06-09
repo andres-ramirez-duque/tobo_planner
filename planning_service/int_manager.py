@@ -2,18 +2,13 @@
 import logging
 import threading
 import time
-import rospy
 
-from std_msgs.msg import String
-from tobo_planner.msg import action_chain
-from tobo_planner.msg import web_chain
-from tobo_planner.srv import PlannerMode,PlannerModeResponse
-from naoqi_bridge_msgs.srv import SetString
 
 
 
 LOG=True
 ACTION_CHAIN_LAUNCHER_PAUSE=5
+ROS=False
 
 class Enum(object): 
   def __init__(self, tupleList):
@@ -53,8 +48,21 @@ procedure_status_enum = Enum(("null", "introstep", "preprocedure", "procedure", 
 interaction_step_status_enum = Enum(("anxiety_test", "nau", "transition"))
 
 
-
-
+class dummy_planner_chain_message(object):
+  def __init__(self, op, params, index):
+    self.action_type=op
+    self.parameters=params
+    self.plan_step=index
+  def __str__(self):
+    return "DPCM [" + str(self.plan_step) + "] " + str(self.action_type) + "_" + "_".join(self.parameters)
+  
+class dummy_web_server_message(object):
+  def __init__(self, message, t, indx):
+    self.parameters = (message,)
+    self.request_type = t
+    self.plan_step = indx
+  def __str__(self):
+    return "DWSM [" + str(self.plan_step) + "] " + str(self.request_type) + " " + str(self.parameters)
 
 class Timer(object):
 
@@ -83,17 +91,19 @@ class MessageGiver(Timer):
   def _trigger(self, args):
     apply(self.s, (self.m, args))
 
-class DummyWebServer(MessageGiver):
+class DummyWebServer(Timer):
   def __init__(self, t, s):
-    super(DummyWebServer, self).__init__(t, s, None)
+    super(DummyWebServer, self).__init__(t)
     self.web_server_status = web_server_status_enum.idle
+    self.s=s
   
-  def ask_for_user_input(self, options, default, timeout=10, args = (1,)):
-    self.m = default
-    self.start(args)
-  
-  def disable_user_input(self, m):
-    pass
+  def ask_for_user_input(self, options, default, timeout=10, args = (1,)): ## XXX timeout ignored here -could just set self.t?
+    obj, label, indx = key_deconstruct(args[0])
+    message_out = dummy_web_server_message(default, label, indx)
+    self.start((message_out,))
+    
+  def _trigger(self, message):
+    apply(self.s, (message,))
 
 class WebServer(object):
   def __init__(self, s):
@@ -106,37 +116,34 @@ class WebServer(object):
     msg.plan_step = indx
     msg.request_type = label
     msg.parameters = options
-    msg.duration = timeout #XXX self.op_timeout["progressprocstep"]
+    msg.duration = timeout
     self.web_chain_pub.publish(msg)
     
-  
-  def disable_user_input(self, m):
-    pass
 
 class DummyPlanner(Timer):
   def __init__(self, t, s, steps):
     super(DummyPlanner, self).__init__(t)
     self.s=s
     self.steps = steps
-    self.next_id = 0
-    self.planner_status = planner_status_enum.idle
+  
+  def get_action(self, plan_step):
+    action_bits = self.steps[plan_step].split("_")
+    op = action_bits[0]
+    params = action_bits[1:]
+    message_out = dummy_planner_chain_message(op, params, plan_step)
+    super(DummyPlanner, self).start((message_out,))
     
   def _trigger(self, args):
-    apply(self.s, (self.steps[self.next_id],args))
-    self.next_id+=1
-
-  def is_active(self) :
-    return not self.planner_status == planner_status_enum.idle
+    apply(self.s, (args,)) 
 
 class Planner(object):
   def __init__(self, s):
     self.action_sub = rospy.Subscriber("/next_action", action_chain, s)
-    self.next_id = 0
     
-  def start(self, args):
-    print "%%%%%%%%%%%%% PASSING INTO PLANNER", args
-    k = key_deconstruct(args[0])
-    self.get_an_action_client("chicken", k[2])
+  def get_action(self, plan_step):
+    mode = "chicken"
+    print "%%%%%%%%%%%%% PASSING INTO PLANNER", mode, plan_step
+    self.get_an_action_client(mode, plan_step)
 
   def get_an_action_client(self, planner_mode,plan_step):
     rospy.wait_for_service('get_an_action')
@@ -150,20 +157,18 @@ class Planner(object):
 
 class service_provider(object):
   def __init__(self):
-    self.action_broadcast_f = None
-    self.webserver_broadcast_f = None
     self._last_tag = None
-  def request_action(self, tag):
-    self._last_tag = tag
-    self._request_action()
+
+  def initialise(self, action_broadcast_f, webserver_broadcast_f):
+    self.init_planner(action_broadcast_f)
+    self.init_webserver(webserver_broadcast_f)
+    
+  def request_action(self, plan_index):
+    self._request_action(plan_index)
   def ask_for_user_input(self, options, default, timeout, k):
     self._last_tag = k
     self._ask_for_user_input(options, default, timeout, k)
     
-  def register_for_action_broadcast(self, callback):
-    self.action_broadcast_f = callback
-  def register_for_webserver_broadcast(self, callback):
-    self.webserver_broadcast_f = callback
   def on_received_planner_action(self, message, t=None):
     apply(self.action_broadcast_f, (message, self._last_tag))
   def on_received_webserver_message(self, message, t=None):
@@ -177,31 +182,43 @@ class service_provider(object):
 class dummy_ros_proxy(service_provider):
   def __init__(self, plan):
     super(dummy_ros_proxy, self).__init__()
-    self.planner = Planner(2, self.on_received_planner_action, plan)
-    self.web_server = WebServer(10, self.on_received_webserver_message)
-  def _request_action(self):
-    self.planner.start((self._last_tag,))
+    self.plan=plan
+    
+  def init_planner(self, action_broadcast_f):
+    self.planner = DummyPlanner(2, action_broadcast_f, self.plan)
+  def init_webserver(self, webserver_broadcast_f):
+    self.web_server = DummyWebServer(10, webserver_broadcast_f)
+    
+  def _request_action(self, plan_index):
+    self.planner.get_action(plan_index)
   def _ask_for_user_input(self, options, default, timeout, k):
     self.web_server.ask_for_user_input(options, default, timeout, (k,))
+  def set_last_executed_action(self, a):
+    pass
 
 class ros_proxy(service_provider):
   def __init__(self):
     super(ros_proxy, self).__init__()
-    self.planner = Planner(self.on_received_planner_action)
-    self.web_server = WebServer(self.on_received_webserver_message)
-  def _request_action(self):
-    self.planner.start((self._last_tag,))
+    
+  def init_planner(self, action_broadcast_f):
+    self.planner = Planner(action_broadcast_f)
+  def init_webserver(self, webserver_broadcast_f):
+    self.web_server = WebServer(webserver_broadcast_f)
+    
+  def _request_action(self, plan_index):
+    self.planner.get_action(plan_index)
   def _ask_for_user_input(self, options, default, timeout, k):
     self.web_server.ask_for_user_input(options, default, timeout, (k,))
-
+  def set_last_executed_action(self, a):
+    path_to_stage_param="/parameters/last_executed_action" # maybe just a yaml parameter?
+    rospy.set_param(path_to_stage_param, a)
   
 
 
 class int_manager(object):
   def __init__(self, service_provider):
     self.service_provider = service_provider
-    self.service_provider.register_for_action_broadcast(self.get_message)
-    self.service_provider.register_for_webserver_broadcast(self.webserver_message)
+    self.service_provider.initialise(self.planner_message_event, self.webserver_message_event)
     self.active_requests = []
     self.request_defaults = {}
     self.active_requests_lock = threading.Lock()
@@ -211,11 +228,11 @@ class int_manager(object):
     self.procedure_status = procedure_status_enum.null # XXX TODO
     self.interaction_step_status = None # XXX TODO
     
-    self.counter=0
+    self.counter=-1
     self.init_timeouts()
     
   def init_timeouts(self):
-    self.op_timeout = {"progressprocstep": 10,
+    self.op_timeout = {"progressprocstep": 20,
                        "doactivity": 10,
                        "anxietytest": 10,
                        "idle": 10
@@ -263,14 +280,14 @@ class int_manager(object):
         print "WARNING: goal achieved, but manager lost.."
       return
     else:
-      print "WARNING: unknown action: " + message
+      print "WARNING: unknown action: ", op, params
       return
     MessageGiver(t, self.on_timer_event, None).start((key_maker("manager","timeout",self.counter),))
     
   def reconstruct_action_str(self, op, params):
     return op+"_"+"_".join(params)
-    
-  def get_message(self, action_message, dummy): # a broadcast from the planner
+  
+  def planner_message_event(self, action_message): # a broadcast from the planner
     op = action_message.action_type 
     params = action_message.parameters
     indx = action_message.plan_step
@@ -300,7 +317,7 @@ class int_manager(object):
     if LOG:
       print "+ Calling planner..", self.counter
     if self.set_status_if_in_one_of(manager_status_enum.planning, (manager_status_enum.idle,)):
-      self.service_provider.request_action(key_maker("planner","action request",self.counter))
+      self.service_provider.request_action(self.counter)
 
   def process_request_reply(self, flag, message):
     if flag == "stage progression":
@@ -315,8 +332,7 @@ class int_manager(object):
     self.active_requests_lock.release()
   def _record_if_requests_completed(self):
     if len(self.active_requests) == 0:
-      path_to_stage_param="/parameters/last_executed_action" # maybe just a yaml parameter?
-      rospy.set_param(path_to_stage_param, self._current_action)
+      self.service_provider.set_last_executed_action(self._current_action)
       self._current_action=None
       self.set_status_if_in_one_of(manager_status_enum.idle, (manager_status_enum.executing,))
   
@@ -331,7 +347,6 @@ class int_manager(object):
         if LOG:
           print "@TIMEOUT:"
         for flag in self.active_requests:
-          #print "TODO: do something about ", flag, self.request_defaults[flag]
           self.process_request_reply(flag, self.request_defaults[flag])
           self.handle_disengagements(flag)
             
@@ -344,10 +359,9 @@ class int_manager(object):
     else:
         if LOG:
           print "Ignoring timeout - no longer executing.."
+ 
 
-  def webserver_message(self, web_message, dummy):
-    #print k
-    #obj, t, indx = key_deconstruct(k)
+  def webserver_message_event(self, web_message):
     message = str(web_message.parameters[0])
     t = web_message.request_type
     indx = web_message.plan_step
@@ -359,7 +373,7 @@ class int_manager(object):
       self.record_if_requests_completed()
     else:
       if LOG:
-        print "++++ Ignoring: ", k
+        print "++++ Ignoring: ", str(web_message)
 
   def on_timer_event(self, message, k):
     obj, t, indx = key_deconstruct(k)
@@ -419,22 +433,25 @@ class int_manager(object):
 
   def init(self):
     self.set_status_if_in_one_of(manager_status_enum.idle, (manager_status_enum.before,))
-    try:
-      self._start_action_chain_when_appropriate()
-    except rospy.exceptions.ROSInterruptException:
-      print("Shutting down")
+    self._start_action_chain_when_appropriate()
     if LOG:
       print "=== Completed Int manager loop ====="
-  
-  
-#plan = ("action:doactivity2bold_intro_intronau_introstep_medium_low","action:progressprocstep1_introstep_preprocedure","action:goal")
-#im = int_manager(dummy_ros_proxy(plan))
-#im.init()
+
 if __name__ == '__main__':
+  import rospy
+
+  from std_msgs.msg import String
+  from tobo_planner.msg import action_chain
+  from tobo_planner.msg import web_chain
+  from tobo_planner.srv import PlannerMode,PlannerModeResponse
+  from naoqi_bridge_msgs.srv import SetString
+
   im = int_manager(ros_proxy())
   rospy.init_node('ros_int_manager', anonymous=True)
-  im.init()
-
+  try:
+    im.init()
+  except rospy.exceptions.ROSInterruptException:
+      print("Shutting down")
 
 
 
