@@ -107,7 +107,7 @@ class DummyWebServer(Timer):
 
 class WebServer(object):
   def __init__(self, s):
-    self.web_chain_sub = rospy.Subscriber("/request",web_chain,s)    
+    self.web_chain_sub = rospy.Subscriber("/request", web_chain, s) 
     self.web_chain_pub = rospy.Publisher('/listener_req', web_chain, queue_size=10)
   
   def ask_for_user_input(self, options, default, timeout=10, args = (1,)):
@@ -238,6 +238,11 @@ class int_manager(object):
                        "idle": 10
                        }
 
+
+  ######################################################################################################
+  ### action implementation ############################################################################
+  ######################################################################################################
+
   def ask_user_progress_proc_step(self, options, default, timeout, k):
     self.service_provider.ask_for_user_input(options, default, timeout, k)
 
@@ -283,41 +288,6 @@ class int_manager(object):
       print "WARNING: unknown action: ", op, params
       return
     MessageGiver(t, self.on_timer_event, None).start((key_maker("manager","timeout",self.counter),))
-    
-  def reconstruct_action_str(self, op, params):
-    return op+"_"+"_".join(params)
-  
-  def planner_message_event(self, action_message): # a broadcast from the planner
-    op = action_message.action_type 
-    params = action_message.parameters
-    indx = action_message.plan_step
-    self.process_action_execution(op, params)
-
-  def add_flag(self, flag, default):
-    self.active_requests_lock.acquire()
-    self.active_requests.append(flag)
-    self.request_defaults[flag]=default
-    self.active_requests_lock.release()
-
-  def incr_counter_and_clear_flags(self):
-    self.active_requests_lock.acquire()
-    self.counter+=1
-    del self.active_requests[:]
-    self.active_requests_lock.release()
-    
-  def is_active_flag(self, flag):
-      self.active_requests_lock.acquire()
-      b = flag in self.active_requests
-      self.active_requests_lock.release()
-      return b
-    
-  def start_action_chain(self):
-    self.incr_counter_and_clear_flags()
-
-    if LOG:
-      print "+ Calling planner..", self.counter
-    if self.set_status_if_in_one_of(manager_status_enum.planning, (manager_status_enum.idle,)):
-      self.service_provider.request_action(self.counter)
 
   def process_request_reply(self, flag, message):
     if flag == "stage progression":
@@ -326,76 +296,13 @@ class int_manager(object):
     else:
       print "TODO: do something about ", flag, message
 
-  def record_if_requests_completed(self):
-    self.active_requests_lock.acquire()
-    self._record_if_requests_completed()
-    self.active_requests_lock.release()
-  def _record_if_requests_completed(self):
-    if len(self.active_requests) == 0:
-      self.service_provider.set_last_executed_action(self._current_action)
-      self._current_action=None
-      self.set_status_if_in_one_of(manager_status_enum.idle, (manager_status_enum.executing,))
-  
-  def handle_disengagements(self, flag):
-    if flag == "stage progression":
-      self.service_provider.disable_user_info_request(flag)
-  
-  def handle_timeout(self, indx, message):
-    if self.status_is_one_of((manager_status_enum.executing,)):
-      self.active_requests_lock.acquire()
-      if self.counter == indx :
-        if LOG:
-          print "@TIMEOUT:"
-        for flag in self.active_requests:
-          self.process_request_reply(flag, self.request_defaults[flag])
-          self.handle_disengagements(flag)
-            
-        del self.active_requests[:]
-        self._record_if_requests_completed()
-      else:
-        if LOG:
-          print "Ignoring timeout - previous step.."
-      self.active_requests_lock.release()
-    else:
-        if LOG:
-          print "Ignoring timeout - no longer executing.."
- 
-
-  def webserver_message_event(self, web_message):
-    message = str(web_message.parameters[0])
-    t = web_message.request_type
-    indx = web_message.plan_step
+  def reconstruct_action_str(self, op, params):
+    return op+"_"+"_".join(params)
     
-    if self.remove_request_if_active(t, indx):
-      if LOG:
-        print "++++ On timer event: " + str(message)
-      self.process_request_reply(t, message)
-      self.record_if_requests_completed()
-    else:
-      if LOG:
-        print "++++ Ignoring: ", str(web_message)
 
-  def on_timer_event(self, message, k):
-    obj, t, indx = key_deconstruct(k)
-    if obj == "manager":
-      if t == "timeout":
-        self.handle_timeout(indx, message)
-      else:
-        print "WARNING: unknown manager type: ", message, k
-
-  def remove_request_if_active(self, flag, indx):
-    # Still a fresh request, if: executing, same index and flag is active
-    b=False
-    if self.status_is_one_of((manager_status_enum.executing,)):
-      self.active_requests_lock.acquire()
-      
-      if self.counter == indx :
-        if flag in self.active_requests:
-          b = True
-          self.active_requests.remove(flag)
-      
-      self.active_requests_lock.release()
-    return b
+  ######################################################################################################
+  ### locking util methods #############################################################################
+  ######################################################################################################
 
   def set_status_if_in_one_of(self, status, statuses):
     self.status_lock.acquire()
@@ -423,6 +330,123 @@ class int_manager(object):
     s = manager_status_enum[self.status]
     self.status_lock.release()
     return s
+
+
+  ######################################################################################################
+  ### active request maintenance #######################################################################
+  ######################################################################################################
+
+  def add_flag(self, flag, default):
+    self.active_requests_lock.acquire()
+    self.active_requests.append(flag)
+    self.request_defaults[flag]=default
+    self.active_requests_lock.release()
+
+  def incr_counter_and_clear_flags(self):
+    self.active_requests_lock.acquire()
+    self.counter+=1
+    del self.active_requests[:]
+    self.active_requests_lock.release()
+    
+  def is_active_flag(self, flag):
+      self.active_requests_lock.acquire()
+      b = flag in self.active_requests
+      self.active_requests_lock.release()
+      return b
+
+  def record_if_requests_completed(self):
+    self.active_requests_lock.acquire()
+    self._record_if_requests_completed()
+    self.active_requests_lock.release()
+  def _record_if_requests_completed(self):
+    if len(self.active_requests) == 0:
+      self.service_provider.set_last_executed_action(self._current_action)
+      self._current_action=None
+      self.set_status_if_in_one_of(manager_status_enum.idle, (manager_status_enum.executing,))
+  
+  def handle_disengagements(self, flag):
+    if flag == "stage progression":
+      self.service_provider.disable_user_info_request(flag)
+
+  def remove_request_if_active(self, flag, indx):
+    # Still a fresh request, if: executing, same index and flag is active
+    b=False
+    if self.status_is_one_of((manager_status_enum.executing,)):
+      self.active_requests_lock.acquire()
+      
+      if self.counter == indx :
+        if flag in self.active_requests:
+          b = True
+          self.active_requests.remove(flag)
+      
+      self.active_requests_lock.release()
+    return b
+
+  def handle_timeout(self, indx, message):
+    if self.status_is_one_of((manager_status_enum.executing,)):
+      self.active_requests_lock.acquire()
+      if self.counter == indx :
+        if LOG:
+          print "@TIMEOUT:"
+        for flag in self.active_requests:
+          self.process_request_reply(flag, self.request_defaults[flag])
+          self.handle_disengagements(flag)
+            
+        del self.active_requests[:]
+        self._record_if_requests_completed()
+      else:
+        if LOG:
+          print "Ignoring timeout - previous step.."
+      self.active_requests_lock.release()
+    else:
+        if LOG:
+          print "Ignoring timeout - no longer executing.."
+
+
+  ######################################################################################################
+  ### broadcast handlers ###############################################################################
+  ######################################################################################################
+
+  def planner_message_event(self, action_message): # a broadcast from the planner
+    op = action_message.action_type 
+    params = action_message.parameters
+    indx = action_message.plan_step
+    self.process_action_execution(op, params)
+
+  def webserver_message_event(self, web_message):
+    message = str(web_message.parameters[0])
+    t = web_message.request_type
+    indx = web_message.plan_step
+    
+    if self.remove_request_if_active(t, indx):
+      if LOG:
+        print "++++ On timer event: " + str(message)
+      self.process_request_reply(t, message)
+      self.record_if_requests_completed()
+    else:
+      if LOG:
+        print "++++ Ignoring: ", str(web_message)
+
+  def on_timer_event(self, message, k):
+    obj, t, indx = key_deconstruct(k)
+    if obj == "manager":
+      if t == "timeout":
+        self.handle_timeout(indx, message)
+      else:
+        print "WARNING: unknown manager type: ", message, k
+
+
+  ######################################################################################################
+  ### main loop ########################################################################################
+  ######################################################################################################
+
+  def start_action_chain(self):
+    self.incr_counter_and_clear_flags()
+
+    if LOG:
+      print "+ Calling planner..", self.counter
+    if self.set_status_if_in_one_of(manager_status_enum.planning, (manager_status_enum.idle,)):
+      self.service_provider.request_action(self.counter)
 
   def _start_action_chain_when_appropriate(self):
     while not self.is_finished():
