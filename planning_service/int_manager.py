@@ -25,10 +25,9 @@ def key_maker(obj, t, indx):
 def key_deconstruct(k):
   bits = k.split(".")
   return bits[0], bits[1], int(bits[2])
-
-def parse_action_str(message):
-  bits=message.split("_")
-  return bits[0][len("action:"):], bits[1:]
+  
+def reconstruct_action_str(op, params):
+  return op+"_"+"_".join(params)
 
 """
 The following are options for the internal representation of the statuses of parts of the system.
@@ -64,6 +63,11 @@ class dummy_web_server_message(object):
   def __str__(self):
     return "DWSM [" + str(self.plan_step) + "] " + str(self.request_type) + " " + str(self.parameters)
 
+
+######################################################################################################
+### Timer util classes ###############################################################################
+######################################################################################################
+
 class Timer(object):
 
   def __init__(self, t):
@@ -91,6 +95,10 @@ class MessageGiver(Timer):
   def _trigger(self, args):
     apply(self.s, (self.m, args))
 
+######################################################################################################
+### ros proxies/dummies for planner and webserver ####################################################
+######################################################################################################
+
 class DummyWebServer(Timer):
   def __init__(self, t, s):
     super(DummyWebServer, self).__init__(t)
@@ -104,6 +112,7 @@ class DummyWebServer(Timer):
     
   def _trigger(self, message):
     apply(self.s, (message,))
+
 
 class WebServer(object):
   def __init__(self, s):
@@ -155,13 +164,20 @@ class Planner(object):
       print("Service call failed: %s"%e)
 
 
+
+######################################################################################################
+### ros proxies/dummies entry point ##################################################################
+######################################################################################################
+
 class service_provider(object):
   def __init__(self):
     self._last_tag = None
 
-  def initialise(self, action_broadcast_f, webserver_broadcast_f):
+  def initialise(self, action_broadcast_f, webserver_broadcast_f, nau_broadcast_f, stop_f):
     self.init_planner(action_broadcast_f)
     self.init_webserver(webserver_broadcast_f)
+    self.record_nau_listener(nau_broadcast_f)
+    self.record_stop_listener(stop_f)
     
   def request_action(self, plan_index):
     self._request_action(plan_index)
@@ -177,7 +193,10 @@ class service_provider(object):
     pass
   def set_parameter(self, path, v):
     print "[SP] Set: " + path + " to: " + str(v)
-
+  def set_last_executed_action(self, a):
+    pass
+  def stop(self, req):
+    pass
 
 class dummy_ros_proxy(service_provider):
   def __init__(self, plan):
@@ -188,13 +207,15 @@ class dummy_ros_proxy(service_provider):
     self.planner = DummyPlanner(2, action_broadcast_f, self.plan)
   def init_webserver(self, webserver_broadcast_f):
     self.web_server = DummyWebServer(10, webserver_broadcast_f)
+  def record_nau_listener(self, nau_broadcast_f):
+    pass
+  def record_stop_listener(self, stop_f):
+    pass
     
   def _request_action(self, plan_index):
     self.planner.get_action(plan_index)
   def _ask_for_user_input(self, options, default, timeout, k):
     self.web_server.ask_for_user_input(options, default, timeout, (k,))
-  def set_last_executed_action(self, a):
-    pass
 
 class ros_proxy(service_provider):
   def __init__(self):
@@ -204,6 +225,10 @@ class ros_proxy(service_provider):
     self.planner = Planner(action_broadcast_f)
   def init_webserver(self, webserver_broadcast_f):
     self.web_server = WebServer(webserver_broadcast_f)
+  def record_nau_listener(self, nau_broadcast_f):
+    rospy.Subscriber("/naoqi_driver/ALAnimatedSpeech/EndOfAnimatedSpeech", action_chain, nau_broadcast_f)
+  def record_stop_listener(self, stop_f):
+    rospy.Service('/stop_nao', PlannerMode, stop_f)
     
   def _request_action(self, plan_index):
     self.planner.get_action(plan_index)
@@ -212,13 +237,29 @@ class ros_proxy(service_provider):
   def set_last_executed_action(self, a):
     path_to_stage_param="/parameters/last_executed_action" # maybe just a yaml parameter?
     rospy.set_param(path_to_stage_param, a)
-  
+  def stop(self, req):
+    rospy.wait_for_service('/naoqi_driver/set_behavior')
+    try:
+      stop_action = rospy.ServiceProxy('/naoqi_driver/set_behavior', SetString)
+      resp = stop_action('stopAllBehaviors')
+      print("Stoping NAO Behaviors")
+      return resp.success
+      try:
+        sys.exit("Exit by StopAllBehaviors!")
+      except SystemExit as message:
+        print(message)
+    except rospy.ServiceException as e:
+      print("Service call failed: %s"%e)
 
+######################################################################################################
+### interaction manager ##############################################################################
+######################################################################################################
 
 class int_manager(object):
   def __init__(self, service_provider):
     self.service_provider = service_provider
-    self.service_provider.initialise(self.planner_message_event, self.webserver_message_event)
+    self.service_provider.initialise(self.planner_message_event, self.webserver_message_event,
+                                     self.nau_finish_message_event, self.stop_message_event)
     self.active_requests = []
     self.request_defaults = {}
     self.active_requests_lock = threading.Lock()
@@ -240,7 +281,7 @@ class int_manager(object):
 
 
   ######################################################################################################
-  ### action implementation ############################################################################
+  ### action early implementation ######################################################################
   ######################################################################################################
 
   def ask_user_progress_proc_step(self, options, default, timeout, k):
@@ -253,7 +294,7 @@ class int_manager(object):
     self.ask_user_progress_proc_step((s1,s2), s2, t, key_maker("web server",label, self.counter))
     self.add_flag(label, default)
 
-  def process_anxiety_test(self, op, params, t):
+  def process_anxiety_test(self, op, params, t): ### XXX Do we have a return handler?
     s1 = params[0]
     default = op+"_"+ s1
     label = "anxiety test"
@@ -261,10 +302,11 @@ class int_manager(object):
     self.add_flag(label, default)
 
   def process_do_activity_action(self, op, params):
-    pass
+    label = "nau behaviour"
+    self.add_flag(label, None)
 
   def process_action_execution(self, op, params):
-    self._current_action = self.reconstruct_action_str(op, params)
+    self._current_action = reconstruct_action_str(op, params)
     self.set_status_if_in_one_of(manager_status_enum.executing, (manager_status_enum.planning,))
     if op.startswith("progressprocstep") :
       t = self.op_timeout["progressprocstep"]
@@ -288,17 +330,20 @@ class int_manager(object):
       print "WARNING: unknown action: ", op, params
       return
     MessageGiver(t, self.on_timer_event, None).start((key_maker("manager","timeout",self.counter),))
+    
 
+  ######################################################################################################
+  ### action late implementation #######################################################################
+  ######################################################################################################
+  
   def process_request_reply(self, flag, message):
     if flag == "stage progression":
       path_to_stage_param="parameters/multi_vars/proc_stage" # maybe just a yaml parameter?
       self.service_provider.set_parameter(path_to_stage_param, message)
     else:
       print "TODO: do something about ", flag, message
-
-  def reconstruct_action_str(self, op, params):
-    return op+"_"+"_".join(params)
-    
+  
+  
 
   ######################################################################################################
   ### locking util methods #############################################################################
@@ -435,6 +480,26 @@ class int_manager(object):
       else:
         print "WARNING: unknown manager type: ", message, k
 
+  def nau_finish_message_event(self, action_message):
+    action_str = reconstruct_action_str(action_message.action_type, action_message.parameters)
+    t = "nau behaviour"
+    indx = action_message.plan_step
+
+    if self.remove_request_if_active(t, indx):
+      if LOG:
+        print "++++ On timer event: " + str(action_str) + " from: ", t, indx
+      self.process_request_reply(t, message)
+      self.record_if_requests_completed()
+    else:
+      if LOG:
+        print "++++ Ignoring: ", t, indx
+  
+  def stop_message_event(self, req):
+    self.service_provider.stop(req)
+    self._stop()
+  
+  def _stop(self):
+    pass
 
   ######################################################################################################
   ### main loop ########################################################################################
