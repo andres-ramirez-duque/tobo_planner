@@ -1,0 +1,53 @@
+
+
+# templates:
+# 
+# :timeout op_pattern timeout
+# :request op_pattern request_type
+# :effect early|web_server|nau|late op_pattern effector effect_type parameters
+#
+# special characters:
+# 
+# # comment
+# : :timeout :request :effect template name
+# :list: :int: types
+# $X parameter lookup
+# ; entry delimiter in list
+# :conc: concatenation
+
+
+
+
+#######################################################################################
+### Timeouts ##########################################################################
+#######################################################################################
+:timeout doactivity 20
+:timeout idle 20
+:timeout mitigationactivity 20
+:timeout progressprocstep 20
+:timeout anxietytest 20
+
+
+#######################################################################################
+### Requests ##########################################################################
+#######################################################################################
+:request doactivity nau_behaviour
+:request mitigationactivity nau_behaviour
+:request progressprocstep stage_progression
+:request anxietytest anxiety_test
+
+
+#######################################################################################
+### Early effects #####################################################################
+#######################################################################################
+:effect early progressprocstep web_server ask_query stage_progression :list:$1;$2 $1 :int:10
+:effect early anxietytest web_server ask_query anxiety_test :list::bool:T;:bool:F :bool:T :int:10
+
+
+#######################################################################################
+### Late effects ######################################################################
+#######################################################################################
+:effect web_server progressprocstep IM param_set :conc:sp:parameters/boolean_vars/okanxiety;$1 $M
+
+
+

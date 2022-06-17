@@ -2,7 +2,7 @@
 import logging
 import threading
 import time
-
+import espec_parser
 
 
 
@@ -256,8 +256,10 @@ class ros_proxy(service_provider):
 ######################################################################################################
 
 class int_manager(object):
-  def __init__(self, service_provider):
+  def __init__(self, service_provider, espec_fn):
     self.service_provider = service_provider
+    self.timeouts, self.requests, self.effects = espec_parser.parse(espec_fn)
+    
     self.service_provider.initialise(self.planner_message_event, self.webserver_message_event,
                                      self.nau_finish_message_event, self.stop_message_event)
     self.active_requests = []
@@ -305,31 +307,54 @@ class int_manager(object):
     label = "nau behaviour"
     self.add_flag(label, None)
 
+  def op_match(self, op_pattern, op):
+    return op.startswith(op_pattern)
+
+  def process_anxiety_test(self, op, params, eff):
+    self.ask_user_progress_proc_step(("true","false"), "false", t, key_maker("web server",label, self.counter))
+    
+  def process_stage_progression(self, op, params, eff):
+    self.ask_user_progress_proc_step((s1,s2), s2, t, key_maker("web server",label, self.counter))
+
+  def process_query_user(self, op, params, eff):
+    evld_params = map(lambda p: p.get_parameter(op, params, None), eff.parameters)
+    label = evld_params[0]
+    options = evld_params[1]
+    default = evld_params[2]
+    self.ask_user_progress_proc_step(options, default, evld_params[3],key_maker("web server", label, self.counter))
+
+  def webserver_effect(self, op, params, eff):
+    fm = {"ask_query": self.process_query_user}
+    fm[eff.effect_type](op, params, eff)
+
+  def process_early_effects(self, op, params):
+    fm = {"web_server": self.webserver_effect}
+    for eff in self.effects:
+      if eff.when == "early" and self.op_match(eff.op_pattern, op):
+        fm[eff.effector](op, params, eff)
+
+  def add_relevant_requests(self, op, params):
+    for (op_pattern,label) in self.requests:
+      if self.op_match(op_pattern, op):
+        self.add_flag(label, None) ## XXX need to do defaults here I think!
+        
+  def process_timeout(self, op, params):
+    for (op_pattern,d) in self.timeouts:
+      if self.op_match(op_pattern, op):
+        MessageGiver(d, self.on_timer_event, None).start((key_maker("manager","timeout",self.counter),))
+        return
+
   def process_action_execution(self, op, params):
     self._current_action = reconstruct_action_str(op, params)
     self.set_status_if_in_one_of(manager_status_enum.executing, (manager_status_enum.planning,))
-    if op.startswith("progressprocstep") :
-      t = self.op_timeout["progressprocstep"]
-      self.process_progress_proc_step_action(op,params,t)
-    elif op.startswith("doactivity"):
-      self.process_do_activity_action(op,params)
-      t = self.op_timeout["doactivity"]
-    elif op.startswith("mitigationactivity"):
-      self.process_do_activity_action(op,params)
-      t = self.op_timeout["doactivity"]
-    elif op.startswith("idle"):
-      t = self.op_timeout["idle"]
-    elif op.startswith("anxietytest"):
-      t = self.op_timeout["anxietytest"]
-      self.process_anxiety_test(op,params, t)
-    elif op.startswith("goal"):
+    
+    self.add_relevant_requests(op, params)
+    self.process_early_effects(op, params)
+    self.process_timeout(op, params)
+
+    if op.startswith("goal"):
       if not self.set_status_if_in_one_of(manager_status_enum.after, (manager_status_enum.executing,)):
         print "WARNING: goal achieved, but manager lost.."
-      return
-    else:
-      print "WARNING: unknown action: ", op, params
-      return
-    MessageGiver(t, self.on_timer_event, None).start((key_maker("manager","timeout",self.counter),))
     
 
   ######################################################################################################
@@ -535,7 +560,8 @@ if __name__ == '__main__':
   from tobo_planner.srv import PlannerMode,PlannerModeResponse
   from naoqi_bridge_msgs.srv import SetString
 
-  im = int_manager(ros_proxy())
+  espec_fn=rospy.get_param('effects_spec_fn', 'model0.5/internal_effects_specification.txt')
+  im = int_manager(ros_proxy(), espec_fn)
   rospy.init_node('ros_int_manager', anonymous=True)
   try:
     im.init()
