@@ -2,9 +2,19 @@
 import logging
 import threading
 import time
+import dummy_messages
 import espec_parser
 
 
+# XXX The timeout code needs simplified. We assume that each action only maps to one
+# web-server and/or one nau behaviour at most. Therefore we do not need any greater distinction.
+# Defaults need to provided as messages default messages, as if from the relevant provider.
+# These probably need constructed in advance using information in an entry. (new entry type?)
+
+
+## XXX Issue 1. If a service never becomes available we are probably stuck here. Perhaps service requests should be in threads? Or we decide the robot cannot function without the web-server or planner connecting.
+# XXX Issue 2. The timeout is a set number. If we want real pausing then we'll need to allow a method of "pausing" the timer, which might mean i. retain the timer object and notifying it of the pause start, ii. noting the remaining time on the timer
+#
 
 LOG=True
 ACTION_CHAIN_LAUNCHER_PAUSE=5
@@ -45,23 +55,6 @@ nau_status_enum = Enum(("active", "idle"))
 web_server_status_enum = Enum(("active", "idle"))
 procedure_status_enum = Enum(("null", "introstep", "preprocedure", "procedure", "debrief", "end"))
 interaction_step_status_enum = Enum(("anxiety_test", "nau", "transition"))
-
-
-class dummy_planner_chain_message(object):
-  def __init__(self, op, params, index):
-    self.action_type=op
-    self.parameters=params
-    self.plan_step=index
-  def __str__(self):
-    return "DPCM [" + str(self.plan_step) + "] " + str(self.action_type) + "_" + "_".join(self.parameters)
-  
-class dummy_web_server_message(object):
-  def __init__(self, message, t, indx):
-    self.parameters = (message,)
-    self.request_type = t
-    self.plan_step = indx
-  def __str__(self):
-    return "DWSM [" + str(self.plan_step) + "] " + str(self.request_type) + " " + str(self.parameters)
 
 
 ######################################################################################################
@@ -107,7 +100,7 @@ class DummyWebServer(Timer):
   
   def ask_for_user_input(self, options, default, timeout=10, args = (1,)): ## XXX timeout ignored here -could just set self.t?
     obj, label, indx = key_deconstruct(args[0])
-    message_out = dummy_web_server_message(default, label, indx)
+    message_out = dummy_messages.dummy_web_server_message(default, label, indx)
     self.start((message_out,))
     
   def _trigger(self, message):
@@ -139,7 +132,7 @@ class DummyPlanner(Timer):
     action_bits = self.steps[plan_step].split("_")
     op = action_bits[0]
     params = action_bits[1:]
-    message_out = dummy_planner_chain_message(op, params, plan_step)
+    message_out = dummy_messages.dummy_planner_chain_message(op, params, plan_step)
     super(DummyPlanner, self).start((message_out,))
     
   def _trigger(self, args):
@@ -150,7 +143,7 @@ class Planner(object):
     self.action_sub = rospy.Subscriber("/next_action", action_chain, s)
     
   def get_action(self, plan_step):
-    mode = "chicken"
+    mode = "actionprovider"
     print "%%%%%%%%%%%%% PASSING INTO PLANNER", mode, plan_step
     self.get_an_action_client(mode, plan_step)
 
@@ -258,7 +251,7 @@ class ros_proxy(service_provider):
 class int_manager(object):
   def __init__(self, service_provider, espec_fn):
     self.service_provider = service_provider
-    self.timeouts, self.requests, self.effects = espec_parser.parse(espec_fn)
+    self.timeouts, self.requests, self.effects, self.defaults = espec_parser.parse(espec_fn)
     
     self.service_provider.initialise(self.planner_message_event, self.webserver_message_event,
                                      self.nau_finish_message_event, self.stop_message_event)
@@ -272,14 +265,6 @@ class int_manager(object):
     self.interaction_step_status = None # XXX TODO
     
     self.counter=-1
-    self.init_timeouts()
-    
-  def init_timeouts(self):
-    self.op_timeout = {"progressprocstep": 20,
-                       "doactivity": 10,
-                       "anxietytest": 10,
-                       "idle": 10
-                       }
 
 
   ######################################################################################################
@@ -289,39 +274,42 @@ class int_manager(object):
   def ask_user_progress_proc_step(self, options, default, timeout, k):
     self.service_provider.ask_for_user_input(options, default, timeout, k)
 
-  def process_progress_proc_step_action(self, op, params,t):
-    s1,s2 = params[0:2]
-    default = s1
-    label = "stage progression"
-    self.ask_user_progress_proc_step((s1,s2), s2, t, key_maker("web server",label, self.counter))
-    self.add_flag(label, default)
+  #def process_progress_proc_step_action(self, op, params,t):
+  #  s1,s2 = params[0:2]
+  #  default = s1
+  #  label = "stage progression"
+  #  self.ask_user_progress_proc_step((s1,s2), s2, t, key_maker("web server",label, self.counter))
+  #  self.add_flag(label, default)
 
-  def process_anxiety_test(self, op, params, t): ### XXX Do we have a return handler?
-    s1 = params[0]
-    default = op+"_"+ s1
-    label = "anxiety test"
-    self.ask_user_progress_proc_step(("true","false"), "false", t, key_maker("web server",label, self.counter))
-    self.add_flag(label, default)
+  #def process_anxiety_test(self, op, params, t): ### XXX Do we have a return handler?
+  #  s1 = params[0]
+  #  default = op+"_"+ s1
+  #  label = "anxiety test"
+  #  self.ask_user_progress_proc_step(("true","false"), "false", t, key_maker("web server",label, self.counter))
+  #  self.add_flag(label, default)
 
-  def process_do_activity_action(self, op, params):
-    label = "nau behaviour"
-    self.add_flag(label, None)
+  #def process_do_activity_action(self, op, params):
+  #  label = "nau behaviour"
+  #  self.add_flag(label, None)
 
   def op_match(self, op_pattern, op):
     return op.startswith(op_pattern)
 
-  def process_anxiety_test(self, op, params, eff):
-    self.ask_user_progress_proc_step(("true","false"), "false", t, key_maker("web server",label, self.counter))
+  #def process_anxiety_test(self, op, params, eff):
+  #  self.ask_user_progress_proc_step(("true","false"), "false", t, key_maker("web server",label, self.counter))
     
-  def process_stage_progression(self, op, params, eff):
-    self.ask_user_progress_proc_step((s1,s2), s2, t, key_maker("web server",label, self.counter))
+  #def process_stage_progression(self, op, params, eff):
+  #  self.ask_user_progress_proc_step((s1,s2), s2, t, key_maker("web_server",label, self.counter))
+
+  def evaluate_parameters(self, op, params, m, eff):
+    return map(lambda p: p.get_parameter(op, params, m), eff.parameters)
 
   def process_query_user(self, op, params, eff):
-    evld_params = map(lambda p: p.get_parameter(op, params, None), eff.parameters)
+    evld_params = self.evaluate_parameters(op, params, None, eff)
     label = evld_params[0]
     options = evld_params[1]
     default = evld_params[2]
-    self.ask_user_progress_proc_step(options, default, evld_params[3],key_maker("web server", label, self.counter))
+    self.ask_user_progress_proc_step(options, default, evld_params[3],key_maker("web_server", label, self.counter))
 
   def webserver_effect(self, op, params, eff):
     fm = {"ask_query": self.process_query_user}
@@ -338,19 +326,19 @@ class int_manager(object):
       if self.op_match(op_pattern, op):
         self.add_flag(label, None) ## XXX need to do defaults here I think!
         
-  def process_timeout(self, op, params):
+  def add_relevant_timeout(self, op, params):
     for (op_pattern,d) in self.timeouts:
       if self.op_match(op_pattern, op):
         MessageGiver(d, self.on_timer_event, None).start((key_maker("manager","timeout",self.counter),))
         return
 
   def process_action_execution(self, op, params):
-    self._current_action = reconstruct_action_str(op, params)
+    self._current_action = (op, params)
     self.set_status_if_in_one_of(manager_status_enum.executing, (manager_status_enum.planning,))
     
     self.add_relevant_requests(op, params)
     self.process_early_effects(op, params)
-    self.process_timeout(op, params)
+    self.add_relevant_timeout(op, params)
 
     if op.startswith("goal"):
       if not self.set_status_if_in_one_of(manager_status_enum.after, (manager_status_enum.executing,)):
@@ -361,13 +349,20 @@ class int_manager(object):
   ### action late implementation #######################################################################
   ######################################################################################################
   
-  def process_request_reply(self, flag, message):
-    if flag == "stage progression":
-      path_to_stage_param="parameters/multi_vars/proc_stage" # maybe just a yaml parameter?
-      self.service_provider.set_parameter(path_to_stage_param, message)
-    else:
-      print "TODO: do something about ", flag, message
+  def process_late_effect(self, op, params, message, eff): 
+    fm = {"param_set": self.set_parameter}
+    fm[eff.effect_type](op, params, message, eff)
   
+  def process_late_effects(self, signal, op, params, message):
+    fm = {"IM": self.process_late_effect}
+    for eff in self.effects:
+      if eff.when == signal and self.op_match(eff.op_pattern, op):
+        fm[eff.effector](op, params, message, eff)
+  
+  def set_parameter(self, op, params, message, eff):
+    evld_params = self.evaluate_parameters(op, params, message, eff)
+    path_to_stage_param, message = evld_params[:2]
+    self.service_provider.set_parameter(path_to_stage_param, message)
   
 
   ######################################################################################################
@@ -430,48 +425,25 @@ class int_manager(object):
     self.active_requests_lock.release()
   def _record_if_requests_completed(self):
     if len(self.active_requests) == 0:
-      self.service_provider.set_last_executed_action(self._current_action)
+      self.service_provider.set_last_executed_action(apply(reconstruct_action_str, self._current_action))
       self._current_action=None
       self.set_status_if_in_one_of(manager_status_enum.idle, (manager_status_enum.executing,))
-  
-  def handle_disengagements(self, flag):
-    if flag == "stage progression":
-      self.service_provider.disable_user_info_request(flag)
+
+  def check_is_relevant(self, indx):
+    # Still a fresh request, if: executing, same index and flag is active
+    return self.status_is_one_of((manager_status_enum.executing,)) and self.counter == indx
 
   def remove_request_if_active(self, flag, indx):
-    # Still a fresh request, if: executing, same index and flag is active
     b=False
-    if self.status_is_one_of((manager_status_enum.executing,)):
-      self.active_requests_lock.acquire()
+    self.active_requests_lock.acquire()
       
-      if self.counter == indx :
-        if flag in self.active_requests:
-          b = True
-          self.active_requests.remove(flag)
+    if self.check_is_relevant(indx):
+      if flag in self.active_requests:
+        b = True
+        self.active_requests.remove(flag)
       
-      self.active_requests_lock.release()
+    self.active_requests_lock.release()
     return b
-
-  def handle_timeout(self, indx, message):
-    if self.status_is_one_of((manager_status_enum.executing,)):
-      self.active_requests_lock.acquire()
-      if self.counter == indx :
-        if LOG:
-          print "@TIMEOUT:"
-        for flag in self.active_requests:
-          self.process_request_reply(flag, self.request_defaults[flag])
-          self.handle_disengagements(flag)
-            
-        del self.active_requests[:]
-        self._record_if_requests_completed()
-      else:
-        if LOG:
-          print "Ignoring timeout - previous step.."
-      self.active_requests_lock.release()
-    else:
-        if LOG:
-          print "Ignoring timeout - no longer executing.."
-
 
   ######################################################################################################
   ### broadcast handlers ###############################################################################
@@ -485,36 +457,54 @@ class int_manager(object):
 
   def webserver_message_event(self, web_message):
     message = str(web_message.parameters[0])
-    t = web_message.request_type
+    t = "web_server"
     indx = web_message.plan_step
     
     if self.remove_request_if_active(t, indx):
       if LOG:
         print "++++ On timer event: " + str(message)
-      self.process_request_reply(t, message)
+      op, params = self._current_action
+      self.process_late_effects(t, op, params, message)
       self.record_if_requests_completed()
     else:
       if LOG:
         print "++++ Ignoring: ", str(web_message)
 
+  def apply_defaults_for_active_requests(self, op, params, indx):
+    fm = {"nau_behaviour": self.nau_finish_message_event,"web_server": self.webserver_message_event}
+    for (provider,op_pattern,message_frame) in self.defaults:
+      if provider in self.active_requests:
+        if self.op_match(op_pattern, op):
+          fm[provider](message_frame.make(op, params, indx))
+   
   def on_timer_event(self, message, k):
     obj, t, indx = key_deconstruct(k)
-    if obj == "manager":
-      if t == "timeout":
-        self.handle_timeout(indx, message)
-      else:
-        print "WARNING: unknown manager type: ", message, k
+    if self.check_is_relevant(indx) :
+      if LOG:
+        print "@TIMEOUT:"
+      op, params = self._current_action
+      self.apply_defaults_for_active_requests(op, params, indx)
+      
+      self.active_requests_lock.acquire()
+      if self.check_is_relevant(indx):
+        op, params = self._current_action
+        del self.active_requests[:]
+        self._record_if_requests_completed()
+      self.active_requests_lock.release()
+    else:
+      if LOG:
+        print "Ignoring timeout - previous step.."
+      
 
   def nau_finish_message_event(self, action_message):
     action_str = reconstruct_action_str(action_message.action_type, action_message.parameters)
-    t = "nau behaviour"
+    t = "nau_behaviour"
     indx = action_message.plan_step
-
     if self.remove_request_if_active(t, indx):
       if LOG:
         print "++++ On timer event: " + str(action_str) + " from: ", t, indx
-      self.process_request_reply(t, message)
-      self.record_if_requests_completed()
+      self.process_late_effects(t, action_message.action_type, action_message.parameters, action_message)
+      self.record_if_requests_completed(indx)
     else:
       if LOG:
         print "++++ Ignoring: ", t, indx

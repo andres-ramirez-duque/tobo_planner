@@ -33,8 +33,8 @@
 #######################################################################################
 :request doactivity nau_behaviour
 :request mitigationactivity nau_behaviour
-:request progressprocstep stage_progression
-:request anxietytest anxiety_test
+:request progressprocstep web_server
+:request anxietytest web_server
 
 
 #######################################################################################
@@ -47,7 +47,12 @@
 #######################################################################################
 ### Late effects ######################################################################
 #######################################################################################
-:effect web_server progressprocstep IM param_set :conc:sp:parameters/boolean_vars/okanxiety;$1 $M
+:effect web_server anxietytest IM param_set :conc:sp:parameters/boolean_vars/okanxiety;$1 $M
+
+#######################################################################################
+### Defaults ##########################################################################
+#######################################################################################
+:default web_server anxietytest Web :bool:T web_server
 
 
 

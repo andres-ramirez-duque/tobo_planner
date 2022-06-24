@@ -1,5 +1,9 @@
 
+import dummy_messages
+
+
 LOG=True
+
 
 
 class timeouts_parser :
@@ -81,27 +85,16 @@ class effect(object):
     l = self.when, self.op_pattern, self.effector, self.effect_type, map(lambda x: str(x), self.parameters)
     return "Effect:\n"+"\n".join(map(lambda x: str(x), l))
 
-class effects_parser :
-  def __init__(self):
-    self.effects = []
+class parameter_parser:
+  def parse_parameter(self, pstr):
+    if pstr.startswith(":list:"):
+      param = self.parse_lst(pstr)
+    elif pstr.startswith(":conc:"):
+      param = self.parse_conc(pstr)
+    else:
+      param = self.parse_exp(pstr)
+    return param
     
-  def parse_effect(self, line):
-    when,op_pattern,effector,effect_type  = line[1:5]
-    params = self.parse_params(line[5:])
-    self.effects.append(effect(when,op_pattern,effector,effect_type, params))
-
-  def parse_params(self, param_strs):
-    params=[]
-    for pstr in param_strs:
-      if pstr.startswith(":list:"):
-        param = self.parse_lst(pstr)
-      elif pstr.startswith(":conc:"):
-        param = self.parse_conc(pstr)
-      else:
-        param = self.parse_exp(pstr)
-      params.append(param)
-    return params
-
   def parse_lst(self, pstr):
     c = []
     for e in pstr[6:].split(";"):
@@ -132,10 +125,72 @@ class effects_parser :
     else:
       return value_parameter(pstr)
 
+class effects_parser :
+  def __init__(self):
+    self.effects = []
+    self.pparser = parameter_parser()
+    
+  def parse_effect(self, line):
+    when,op_pattern,effector,effect_type  = line[1:5]
+    params = self.parse_params(line[5:])
+    self.effects.append(effect(when,op_pattern,effector,effect_type, params))
+
+  def parse_params(self, param_strs):
+    params=[]
+    for pstr in param_strs:
+      param = self.pparser.parse_parameter(pstr)
+      params.append(param)
+    return params
+
   def __str__(self):
     return "\n".join(map(lambda x: str(x), self.effects))
 
+class str_message :
+  def __init__(self, p):
+    self.p=p
+    
+  def make(self, op, params, indx):
+    return self.p.get_parameter(op, params, None)
 
+  def __str__(self):
+    return str(self.p)
+
+class web_message :
+  def __init__(self, message_f, t_f):
+    self.message_f=message_f
+    self.t_f=t_f
+    
+  def make(self, op, params, indx):
+    message = self.message_f.get_parameter(op, params, None)
+    t = self.t_f.get_parameter(op, params, None)
+    return dummy_messages.dummy_web_server_message(message, t, indx)
+
+  def __str__(self):
+    return str(self.message_f) + ", " + str(self.t_f)
+
+class defaults_parser :
+  def __init__(self):
+    self.defaults = []
+    self.pparser = parameter_parser()
+  
+  def parse_default(self, line):  
+    provider,op_pattern,mtype = line[1:4]
+    params = line[4:]
+    message = self.parse_message(mtype, params)
+    self.defaults.append((provider,op_pattern,message))
+  
+  def make_str_message(self, pstr):
+    return str_message(self.pparser.parse_parameter(pstr))
+    
+  def make_web_message(self, params):
+    args = map(lambda x: self.pparser.parse_parameter(x), params)
+    return apply(web_message, args)
+    
+  def parse_message(self, mtype, params):
+    fm = {"String": self.make_str_message, "Web": self.make_web_message}
+    return fm[mtype](params)
+  def __str__(self):
+    return "\n".join(map(lambda x: str(x[0]) + ", " + str(x[1]) + ", " + str(x[2]), self.defaults))
 
 def get_lines(fn):
   return map(lambda x: x.split(" "), filter(lambda x: not x == "", map(lambda x: x.split("#")[0].strip(), open(fn).readlines())))
@@ -145,10 +200,12 @@ def parse(fn):
   tp = timeouts_parser()
   rp = requests_parser()
   ep = effects_parser()
+  dp = defaults_parser()
   
   parsers = {":timeout": tp.parse_timeout,
            ":request": rp.parse_request,
-           ":effect": ep.parse_effect
+           ":effect": ep.parse_effect,
+           ":default": dp.parse_default
           }
 
   lines = get_lines(fn)
@@ -160,7 +217,9 @@ def parse(fn):
     print rp
     print "--"
     print ep
-  return tp.timeouts, rp.requests, ep.effects
+    print "--"
+    print dp
+  return tp.timeouts, rp.requests, ep.effects, dp.defaults
 
 
 
