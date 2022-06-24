@@ -425,6 +425,8 @@ class int_manager(object):
     self.active_requests_lock.release()
   def _record_if_requests_completed(self):
     if len(self.active_requests) == 0:
+      op, params=self._current_action
+      self.process_late_effects("late", op, params, None)
       self.service_provider.set_last_executed_action(apply(reconstruct_action_str, self._current_action))
       self._current_action=None
       self.set_status_if_in_one_of(manager_status_enum.idle, (manager_status_enum.executing,))

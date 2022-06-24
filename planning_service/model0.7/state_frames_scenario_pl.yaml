@@ -7,13 +7,9 @@ parameters:
         okanxiety procedure:      false
         isyoungerchild:           false
         
-    multi_vars:
-        episode_step:             'naustep'
-        proc_stage:               'procstage introstep'
+#    multi_vars:                   ''
         
-    multi_vars_values:
-        episode_step:             ['naustep','procedurestep','anxteststep']
-        proc_stage:               ['procstage introstep','procstage end','procstage debrief','procstage preprocedure','procstage procedure']
+#    multi_vars_values:            ''
         
     last_executed_action:         ''
     previous_action:              ''
@@ -46,7 +42,13 @@ planner:
         #done mitigation1:         false
         #done mitigation2:         false
 
-
+    multi_vars:
+        episode_step:             'naustep'
+        proc_stage:               'procstage introstep'
+        
+    multi_vars_values:
+        episode_step:             ['naustep','procedurestep','anxteststep']
+        proc_stage:               ['procstage introstep','procstage end','procstage debrief','procstage preprocedure','procstage procedure']
 
     state_generators:
         queried:                  false
