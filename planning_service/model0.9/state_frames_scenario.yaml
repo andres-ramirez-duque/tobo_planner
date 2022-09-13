@@ -1,0 +1,123 @@
+# params/state_frames_scenario.yaml
+# Parameters for State Frames Scenario
+---
+parameters:
+    boolean_vars:                 
+        #isyoungerchild:          false
+        amanxietymanaged:         false
+        completedprocedure:       false
+        eamdisengaged:            false
+        completedsitecheck:       false
+        #uselecteddivert:          false
+    
+    multi_vars:
+        diversionplan:             ''
+        
+    multi_vars_values:
+        diversionplan:             ['canmakedivertionplan','uselecteddivert','uselectedcalming']
+        
+    last_executed_action:         ''
+    previous_action:              ''
+
+
+planner:
+    boolean_vars:
+        doneidle:                     false
+        uselecteddivert:                     false
+        uselectedcalming:                     false
+        doneanxietytest:                     false
+        okanxiety:                     false
+        doneengagementtest:                     false
+        okengagement:                     false
+        haspaused:                     false
+        haswaited:                     false
+        introductioncomplete:                     false
+        hasdiverted:                     false
+        hascalmed:                     false
+        amrequiresanxietytest:                     false
+        amrequiresdivertion:                     false
+        amrequirescalming:                     false
+        amrequiresanxietyretest:                     false
+        amperforminganxietymanagement:                     false
+        amanxietymanagementcomplete:                     false
+        amanxietymanaged:                     false
+        amrequiresengagementtest:                     false
+        amconeengagementtest:                     false
+        tomanageanxiety:                     false
+        amabort:                     false
+        eamdoneengagementtest:                     false
+        eamrequiresengagementtest:                     false
+        eamdisengaged:                     false
+        canmakedivertionplan:                     false
+        hasmadedivertionplan:                     false
+        hassatisfieddivertionplan:                     false
+        completedpreprocedure:                     false
+        haseducated:                     false
+        duringpreprocedure:                     false
+        givenprocedureinfo:                     false
+        duringsitecheck:                     false
+        completedsitecheck:                     false
+        givenstrategyinfo:                     false
+        duringprocedure:                     false
+        firstperiod:                     false
+        secondperiod:                     false
+        procedurestillrunning:                     false
+        procedurecomplicationsoccurred:                     false
+        waitedforproceduretoend:                     false
+        debriefcomplete:                     false
+        finishcomplete:                     false
+        intropausecomplete:                     false
+        isreadytostart:                     false
+        isreadyforprocedure:                     false
+        procedurepausecomplete:                     false
+        doneactivity intro:                     false
+        doneactivity bye:                     false
+        doneactivity ivdescription:                     false
+        doneactivity song1:                     false
+        doneactivity song2:                     false
+        doneactivity dance1:                     false
+        doneactivity dance2:                     false
+        doneactivity leadmeditation:                     false
+        doneactivity taichi:                     false
+        doneactivity story:                     false
+        doneactivity quiz:                     false
+        doneactivity magic:                     false
+        doneactivity bowout:                     false
+        doneactivity strategyenforce:                     false
+ 
+ 
+action_hierarchy:
+    readyforprocedure:            readyforprocedure,wait
+    ppamretestanxiety:            ppamretestanxiety,amretestanxiety,anxietytest
+    ivstartpreprocedure:          ivstartpreprocedure,startpreprocedure
+    pameducateonprocedure:        pameducateonprocedure,doactivity
+    procedurepause:               procedurepause,pause
+    introductionpause:            introductionpause,pause
+    ppstartanxietymanagement:     ppstartanxietymanagement,amstartanxietymanagement
+    waitforproceduretoend:        waitforproceduretoend,wait
+    ivquerysitecheck:             ivquerysitecheck,querysitecheck,wait
+    secondcompleteprocedure:      secondcompleteprocedure
+    readytostart:                 readytostart,wait
+    ivlostengagement:             ivlostengagement,pplostengagement,lostengagement,doactivity
+    sceducateonprocedure:         sceducateonprocedure,doactivity
+    ppmakedivertionplan:          ppmakedivertionplan,makedivertionplan,qtypepreference
+    relaxduringcheck:             relaxduringcheck,calm,doactivity
+    ivfailedtoimpact:             ivfailedtoimpact,ppfailedtoimpact,failedtoimpact,doactivity
+    ppeamdivert:                  ppeamdivert,eamdivert,amdivert,divert,doactivity
+    ivcompletepreprocedure:       ivcompletepreprocedure,completepreprocedure
+    ivfinish:                     ivfinish,finish,doactivity
+    ppdivertor:                   ppdivertor,divertor,divert,doactivity
+    completesitecheck:            completesitecheck
+    pimplementdivertionplandivert: pimplementdivertionplandivert,implementdivertionplandivert,divert,doactivity
+    firstcompleteprocedure:       firstcompleteprocedure
+    pimplementdivertionplancalm:  pimplementdivertionplancalm,implementdivertionplancalm,calm,doactivity
+    ivstartprocedure:             ivstartprocedure,startprocedure
+    ppamtestanxiety:              ppamtestanxiety,amtestanxiety,anxietytest
+    ppeamcalm:                    ppeamcalm,eamcalm,amcalm,calm,doactivity
+    ivprocedurecomplications:     ivprocedurecomplications,procedurecomplications,idle
+    pmakedivertionplan:           pmakedivertionplan,makedivertionplan,qtypepreference
+    ivdebrief:                    ivdebrief,debrief,doactivity
+    ivintroduction:               ivintroduction,introduction,doactivity
+    ppamengagementtest:           ppamengagementtest,amengagementtest,engagementtest
+
+
