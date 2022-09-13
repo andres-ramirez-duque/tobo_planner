@@ -8,13 +8,8 @@ parameters:
         completedprocedure:       false
         eamdisengaged:            false
         completedsitecheck:       false
+        uselecteddivert:          false
         #uselecteddivert:          false
-    
-    multi_vars:
-        diversionplan:             ''
-        
-    multi_vars_values:
-        diversionplan:             ['canmakedivertionplan','uselecteddivert','uselectedcalming']
         
     last_executed_action:         ''
     previous_action:              ''
@@ -40,14 +35,12 @@ planner:
         amrequiresanxietyretest:                     false
         amperforminganxietymanagement:                     false
         amanxietymanagementcomplete:                     false
-        amanxietymanaged:                     false
         amrequiresengagementtest:                     false
         amconeengagementtest:                     false
         tomanageanxiety:                     false
         amabort:                     false
         eamdoneengagementtest:                     false
         eamrequiresengagementtest:                     false
-        eamdisengaged:                     false
         canmakedivertionplan:                     false
         hasmadedivertionplan:                     false
         hassatisfieddivertionplan:                     false
@@ -56,7 +49,6 @@ planner:
         duringpreprocedure:                     false
         givenprocedureinfo:                     false
         duringsitecheck:                     false
-        completedsitecheck:                     false
         givenstrategyinfo:                     false
         duringprocedure:                     false
         firstperiod:                     false

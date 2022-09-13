@@ -100,7 +100,7 @@ def progress_state(dfile, pfile, a):
         v=progress(init_state, outcome, unfluents)
         out_states.append(sorted([runfluents[i] for i in v.fluents]))
         
-    return out_states
+    return (sorted(problem.init.args),out_states)
 
 
 def _convert_cond_effect(mapping, eff):

@@ -95,12 +95,14 @@ class InternalStateManager(VariableValuator):
   def __init__(self, next_states, P, frames):
     self.next_states=next_states
     self._P=P
-    self.frames=dict(map(lambda f: (f.name,f),frames))
+    #self.frames=dict(map(lambda f: (f.name,f),frames))
+    self.frames=frames
     self._next_state=None
   def get_bool_var_value(self, v):
     return self.find_in_state(v)
   def get_multi_var_value(self, v):
-    frame = self.frames[v]
+    #frame = self.frames[v]
+    frame = filter(lambda x: x.name==v, self.frames)[0]
     for e in frame.values:
       if self.find_in_state(e):
         return e
@@ -133,6 +135,139 @@ class InternalStateManager(VariableValuator):
         ps = e.name + " " + " ".join(map(lambda x: str(x[0]), e.ground_args))
         vz.append(ps)
     return vz
+
+class FilteringISManager(InternalStateManager):
+  def __init__(self, current_state, next_states, P, frames):
+    super(FilteringISManager, self).__init__(next_states, P, frames)
+    self.current_state = current_state
+
+  def get_scope(self): 
+    scope = []
+    #for (k,v) in self.frames.items():
+    for v in self.frames:
+      if not v.source=="planner":
+        scope.append(v.name.split(" "))
+    return scope
+
+  def first_pass(self, scope, vals):
+    for (i,p) in enumerate(scope):
+      v=-1
+      if p[0] in self._old_init:
+        for cp in self._old_init[p[0]]:
+          ok = True
+          for j in range(1, len(p)):
+            if not p[j] == cp.args[j-1]:
+              ok = False
+              break
+          if ok:
+            v=1
+            break
+      vals[i]=v
+  
+  def second_pass(self, s, scope, vals):
+    ds = self._make_state_dict(s)
+    for (i,p) in enumerate(scope):
+      v=-1
+      if p[0] in ds:
+        for cp in ds:
+          ok = True
+          for j in range(1, len(p)):
+            if not p[j] == cp.ground_args[j-1]:
+              ok = False
+              break
+          if ok:
+            v=1
+            break
+      if vals[i] == 1:
+        if v == -1:
+          v=-2
+      elif vals[i] == -1:
+        if v == 1:
+          v=2
+      else:
+        print "ERROR in state_builder second pass - wrong value", vals[i]
+        sys.exit(1)
+        
+      vals[i]=v
+
+  def decide_polarity(self, scope, s):
+    vals = [0]*len(scope)
+    self.first_pass(scope, vals)
+    self.second_pass(s, scope, vals)
+    return vals
+
+  def _make_state_dict(self, pl):
+    d = {}
+    for prim in pl:
+      if not prim.name in d :
+        d[prim.name]=[]
+      d[prim.name].append(prim)
+    return d
+
+  def measure_something(self, scope, vals): 
+    covered_changes = 0; num_correct = 0
+    for (i,p) in enumerate(scope):
+      v = -1
+      if p[0] in self._param_state:
+        for cp in self._param_state:
+          ok = True
+          for j in range(1, len(p)):
+            if not p[j] == cp.ground_args[j-1]:
+              ok = False
+              break
+          if ok:
+            v=1
+            break
+      if vals[i] == -2:
+        if v == -1:
+          covered_changes+=1
+          num_correct+=1
+      elif vals[i] == -1:
+        if v == -1:
+          num_correct+=1  
+      elif vals[i] == 1:
+        if v == 1:
+          num_correct+=1
+      elif vals[i] == 2:
+        if v == 1:
+          covered_changes+=1
+          num_correct+=1
+    return covered_changes, num_correct
+
+  def id_important_pols(self, polarities):
+    for i in range(len(polarities[0])):
+      vs = set()
+      for pol in polarities:
+        vs.add(pol[i])
+      if len(vs) > 1:
+        for pol in polarities:
+          if pol[i]==1:
+            pol[i]=2
+          elif pol[i]==-1:
+            pol[i]=-2
+        
+
+  def select_next_state(self):
+    if len (self.next_states) == 1:
+      self._next_state=self.next_states[0]
+    self._old_init=self._make_state_dict(self.current_state)
+    self._param_state = self._make_state_dict(map(lambda x: x.predicate, self._P.init.args))
+    counts = []
+    polarities = []
+    print "Context:"
+    scope = self.get_scope()
+    print scope
+    for s in self.next_states:
+      polarities.append(self.decide_polarity(scope, s))
+    self.id_important_pols(polarities)
+    for (i,s) in enumerate(self.next_states):
+      pols = polarities[i]
+      covered_changes, num_correct = self.measure_something(scope, pols)
+      counts.append(covered_changes)
+      print covered_changes, num_correct, pols, scope
+    print "Selecting", counts.index(max(counts))
+    self._next_state=self.next_states[counts.index(max(counts))]
+
 
 class InitialisingStateManager(VariableValuator):
   def __init__(self, frames):
@@ -235,8 +370,9 @@ def get_state_manager(is_ros, frames):
     sm=DummyStateManagerProxy(frames)
   return sm
 
-def get_state_progressor(next_states, P, frames):
-  return InternalStateManager(next_states, P, frames)
+def get_state_progressor(current_state, next_states, P, frames):
+  #return InternalStateManager(next_states, P, frames)
+  return FilteringISManager(current_state, next_states, P, frames)
 def still_on_last_action(a1, a2):
   return a1==a2
 
@@ -261,8 +397,8 @@ def make_current_scenario(domain_fn, background_knowledge_fn, state_frame_fn, ou
     else:
       a = executor_a_complete
       state_manager.set_previous_action(a)
-    next_states = get_next_states(domain_fn, output_scenario_fn, a, is_costed)
-    internal_state_progressor = get_state_progressor(next_states, P, state_frames)
+    current_state, next_states = get_next_states(domain_fn, output_scenario_fn, a, is_costed)
+    internal_state_progressor = get_state_progressor(current_state, next_states, P, state_frames)
   complete_state_description(P, state_frames, state_manager, internal_state_progressor)
   return P
 
