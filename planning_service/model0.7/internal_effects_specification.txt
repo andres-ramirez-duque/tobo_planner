@@ -52,7 +52,7 @@
 :effect web_server progressprocstep IM param_set parameters/multi_vars/proc_stage :conc:sp:procstage;$M
 :effect late doactivity IM param_set parameters/multi_vars/episode_step procedurestep
 :effect late idle IM param_set parameters/multi_vars/episode_step procedurestep
-:effect late idle IM param_set parameters/multi_vars/episode_step procedurestep
+#:effect late idle IM param_set parameters/multi_vars/episode_step procedurestep
 :effect late progressprocstep1 IM param_set parameters/multi_vars/episode_step anxteststep
 :effect late progressprocstep2 IM param_set parameters/multi_vars/episode_step naustep
 :effect late anxietytest IM param_set parameters/multi_vars/episode_step naustep
