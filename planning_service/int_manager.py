@@ -2,7 +2,7 @@
 import logging
 import threading
 import time
-
+import oyaml as yaml
 
 
 
@@ -256,7 +256,7 @@ class ros_proxy(service_provider):
 ######################################################################################################
 
 class int_manager(object):
-  def __init__(self, service_provider):
+  def __init__(self, service_provider, sffn):
     self.service_provider = service_provider
     self.service_provider.initialise(self.planner_message_event, self.webserver_message_event,
                                      self.nau_finish_message_event, self.stop_message_event)
@@ -270,15 +270,20 @@ class int_manager(object):
     self.interaction_step_status = None # XXX TODO
     
     self.counter=-1
-    self.init_timeouts()
+    #self.init_timeouts()
+    self.parse_state_frame(sffn)
     
-  def init_timeouts(self):
-    self.op_timeout = {"progressprocstep": 20,
-                       "doactivity": 10,
-                       "anxietytest": 10,
-                       "idle": 10
-                       }
-
+  #def init_timeouts(self):
+  #  self.op_timeout = {"doactivity": 10,
+  #                     "query_response": 10,
+  #                     "idle": 10,
+  #                     "pause": 10
+  #                     }
+  def parse_state_frame(self, sffn):
+    with open(sffn, "r") as stream:
+      frame_dict=yaml.safe_load(stream)
+    self._action_hierarchy = dict(map(lambda (k,v): (k,v.split(",")), frame_dict["action_hierarchy"].items()))
+    self.op_timeout = dict(map(lambda (k,v): (k,int(v)), frame_dict["timeouts"].items()))
 
   ######################################################################################################
   ### action early implementation ######################################################################
@@ -294,42 +299,77 @@ class int_manager(object):
     self.ask_user_progress_proc_step((s1,s2), s2, t, key_maker("web server",label, self.counter))
     self.add_flag(label, default)
 
+  def process_wait(self, op, params):
+    label = "wait"
+    options = ("Ready")
+    default="Ready"
+    self.service_provider.ask_for_user_input(options, default, -1, key_maker("web server",label, self.counter))
+    self.add_flag(label, default)
+
+  def process_type_preference_query(self, op, params, t):
+    label = "type preference query"
+    options = ("calm","active")
+    default="active"
+    self.service_provider.ask_for_user_input(options, default, t, key_maker("web server",label, self.counter))
+    self.add_flag(label, default)
+    
+  def process_engagement_test(self, op, params, t):
+    label = "engagement test"
+    options = ("true","false")
+    default="true"
+    self.service_provider.ask_for_user_input(options, default, t, key_maker("web server",label, self.counter))
+    self.add_flag(label, default)
+
+  ### XXX So, we just have a managed true thing - we might also want to attach a removal at the end of preprocedure for cleanliness
   def process_anxiety_test(self, op, params, t): ### XXX Do we have a return handler?
-    s1 = params[0]
-    default = op+"_"+ s1
     label = "anxiety test"
-    self.ask_user_progress_proc_step(("true","false"), "false", t, key_maker("web server",label, self.counter))
+    options = ("true","false")
+    default="true"
+    self.service_provider.ask_for_user_input(options, default, t, key_maker("web server",label, self.counter))
     self.add_flag(label, default)
 
   def process_do_activity_action(self, op, params):
     label = "nau behaviour"
     self.add_flag(label, None)
 
+  """
+doactivity,idle,goal,pause,anxietytest,wait,qtypepreference,engagementtest
+completepreprocedure,secondcompleteprocedure,startpreprocedure,amstartanxietymanagement,
+completesitecheck,firstcompleteprocedure,startprocedure
+"""
+
   def process_action_execution(self, op, params):
     self._current_action = reconstruct_action_str(op, params)
     self.set_status_if_in_one_of(manager_status_enum.executing, (manager_status_enum.planning,))
-    if op.startswith("progressprocstep") :
-      t = self.op_timeout["progressprocstep"]
-      self.process_progress_proc_step_action(op,params,t)
-    elif op.startswith("doactivity"):
-      self.process_do_activity_action(op,params)
-      t = self.op_timeout["doactivity"]
-    elif op.startswith("mitigationactivity"):
-      self.process_do_activity_action(op,params)
-      t = self.op_timeout["doactivity"]
-    elif op.startswith("idle"):
-      t = self.op_timeout["idle"]
-    elif op.startswith("anxietytest"):
-      t = self.op_timeout["anxietytest"]
-      self.process_anxiety_test(op,params, t)
-    elif op.startswith("goal"):
+    timeout_label = None
+    if "doactivity" in self._action_hierarchy[op]:
+      self.process_do_activity_action(op, params)
+      timeout_label = "doactivity"
+    elif "idle" in self._action_hierarchy[op]:
+      timeout_label = "idle"
+    elif "wait" in self._action_hierarchy[op]:
+      self.process_wait(op, params)
+      timeout_label = "wait"
+    elif "pause" in self._action_hierarchy[op]:
+      timeout_label = "pause"
+    elif "anxietytest" in self._action_hierarchy[op]:
+      timeout_label = "query_response"
+      self.process_anxiety_test(op, params, self.op_timeout[timeout_label])
+    elif "qtypepreference" in self._action_hierarchy[op]:
+      timeout_label = "query_response"
+      self.process_type_preference_query(op, params, self.op_timeout[timeout_label])
+    elif "engagementtest" in self._action_hierarchy[op]:
+      timeout_label = "query_response"
+      self.process_engagement_test(op, params, self.op_timeout[timeout_label])
+    elif "goal" in self._action_hierarchy[op]:
       if not self.set_status_if_in_one_of(manager_status_enum.after, (manager_status_enum.executing,)):
         print "WARNING: goal achieved, but manager lost.."
       return
     else:
       print "WARNING: unknown action: ", op, params
-      return
-    MessageGiver(t, self.on_timer_event, None).start((key_maker("manager","timeout",self.counter),))
+      timeout_label = "unknown_action"
+    if timeout_label in self.op_timeout:
+      MessageGiver(self.op_timeout[timeout_label], self.on_timer_event, None).start((key_maker("manager","timeout",self.counter),))
     
 
   ######################################################################################################
@@ -535,7 +575,7 @@ if __name__ == '__main__':
   from tobo_planner.srv import PlannerMode,PlannerModeResponse
   from naoqi_bridge_msgs.srv import SetString
 
-  im = int_manager(ros_proxy())
+  im = int_manager(ros_proxy(), yaml_file)
   rospy.init_node('ros_int_manager', anonymous=True)
   try:
     im.init()

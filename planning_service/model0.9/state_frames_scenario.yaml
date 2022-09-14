@@ -77,7 +77,7 @@ planner:
         doneactivity bowout:                     false
         doneactivity strategyenforce:                     false
  
- 
+
 action_hierarchy:
     readyforprocedure:            readyforprocedure,wait
     ppamretestanxiety:            ppamretestanxiety,amretestanxiety,anxietytest
@@ -111,5 +111,12 @@ action_hierarchy:
     ivdebrief:                    ivdebrief,debrief,doactivity
     ivintroduction:               ivintroduction,introduction,doactivity
     ppamengagementtest:           ppamengagementtest,amengagementtest,engagementtest
+    goal:                         goal
 
-
+timeouts:                        
+    doactivity:                   5
+    query_response:               2
+    idle:                         1
+    pause:                        1
+    wait:                         1
+    unknown_action:               0
