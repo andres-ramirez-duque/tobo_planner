@@ -334,6 +334,10 @@ class int_manager(object):
     self.add_flag(label, None)
 
   """
+  Missing: ivquerysitecheck, firstcompleteprocedure, secondcompleteprocedure, waitforproceduretoend
+  """
+
+  """
 doactivity,idle,goal,pause,anxietytest,wait,qtypepreference,engagementtest
 completepreprocedure,secondcompleteprocedure,startpreprocedure,amstartanxietymanagement,
 completesitecheck,firstcompleteprocedure,startprocedure
