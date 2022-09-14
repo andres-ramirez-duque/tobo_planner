@@ -229,7 +229,8 @@ class ros_proxy(service_provider):
     rospy.Subscriber("/naoqi_driver/ALAnimatedSpeech/EndOfAnimatedSpeech", action_chain, nau_broadcast_f)
   def record_stop_listener(self, stop_f):
     rospy.Service('/stop_nao', PlannerMode, stop_f)
-    
+  def set_parameter(self, path, v):
+    rospy.set_param(path, v)
   def _request_action(self, plan_index):
     self.planner.get_action(plan_index)
   def _ask_for_user_input(self, options, default, timeout, k):
@@ -302,7 +303,7 @@ class int_manager(object):
   def process_wait(self, op, params):
     label = "wait"
     options = ("Ready")
-    default="Ready"
+    default="Defaulted"
     self.service_provider.ask_for_user_input(options, default, -1, key_maker("web server",label, self.counter))
     self.add_flag(label, default)
 
@@ -377,9 +378,23 @@ completesitecheck,firstcompleteprocedure,startprocedure
   ######################################################################################################
   
   def process_request_reply(self, flag, message):
-    if flag == "stage progression":
-      path_to_stage_param="parameters/multi_vars/proc_stage" # maybe just a yaml parameter?
+    if flag == "nau behaviour":
+      pass
+    elif flag == "idle":
+      pass
+    elif flag == "wait":
+      pass
+    elif flag == "pause":
+      pass
+    elif flag == "anxiety test":
+      path_to_stage_param="/parameters/boolean_vars/amanxietymanaged"
       self.service_provider.set_parameter(path_to_stage_param, message)
+    elif flag == "engagement test":
+      path_to_stage_param="/parameters/boolean_vars/eamdisengaged"
+      self.service_provider.set_parameter(path_to_stage_param, not str(message).lower() == "true")
+    elif flag == "type preference query":
+      path_to_stage_param="/parameters/boolean_vars/uselecteddivert"
+      self.service_provider.set_parameter(path_to_stage_param, str(message).lower() == "active")
     else:
       print "TODO: do something about ", flag, message
   
