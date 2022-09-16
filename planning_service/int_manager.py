@@ -27,7 +27,7 @@ def key_deconstruct(k):
   return bits[0], bits[1], int(bits[2])
   
 def reconstruct_action_str(op, params):
-  if len(params) == 0
+  if len(params) == 0:
     return op
   return op+"_"+"_".join(params)
 
@@ -636,7 +636,8 @@ if __name__ == '__main__':
   from tobo_planner.msg import web_chain
   from tobo_planner.srv import PlannerMode,PlannerModeResponse
   from naoqi_bridge_msgs.srv import SetString
-
+  
+  yaml_file = rospy.get_param("/state_frame_fn")
   im = int_manager(ros_proxy(), yaml_file)
   rospy.init_node('ros_int_manager', anonymous=True)
   try:
