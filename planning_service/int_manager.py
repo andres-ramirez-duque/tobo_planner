@@ -271,20 +271,19 @@ class int_manager(object):
     self.interaction_step_status = None # XXX TODO
     
     self.counter=-1
-    #self.init_timeouts()
     self.parse_state_frame(sffn)
     
-  #def init_timeouts(self):
-  #  self.op_timeout = {"doactivity": 10,
-  #                     "query_response": 10,
-  #                     "idle": 10,
-  #                     "pause": 10
-  #                     }
   def parse_state_frame(self, sffn):
     with open(sffn, "r") as stream:
       frame_dict=yaml.safe_load(stream)
     self._action_hierarchy = dict(map(lambda (k,v): (k,v.split(",")), frame_dict["action_hierarchy"].items()))
-    self.op_timeout = dict(map(lambda (k,v): (k,int(v)), frame_dict["timeouts"].items()))
+    self._op_timeout = dict(map(lambda (k,v): (k,int(v)), frame_dict["timeouts"].items()))
+    self._bool_parameters = {}
+    if "parameters" in frame_dict:
+      params = frame_dict["parameters"]
+      if "boolean_vars" in params:
+        self._bool_parameters = params["boolean_vars"]
+    
 
   ######################################################################################################
   ### action early implementation ######################################################################
@@ -359,13 +358,13 @@ completesitecheck,firstcompleteprocedure,startprocedure
       timeout_label = "pause"
     elif "anxietytest" in self._action_hierarchy[op]:
       timeout_label = "query_response"
-      self.process_anxiety_test(op, params, self.op_timeout[timeout_label])
+      self.process_anxiety_test(op, params, self._op_timeout[timeout_label])
     elif "qtypepreference" in self._action_hierarchy[op]:
       timeout_label = "query_response"
-      self.process_type_preference_query(op, params, self.op_timeout[timeout_label])
+      self.process_type_preference_query(op, params, self._op_timeout[timeout_label])
     elif "engagementtest" in self._action_hierarchy[op]:
       timeout_label = "query_response"
-      self.process_engagement_test(op, params, self.op_timeout[timeout_label])
+      self.process_engagement_test(op, params, self._op_timeout[timeout_label])
     elif "goal" in self._action_hierarchy[op]:
       if not self.set_status_if_in_one_of(manager_status_enum.after, (manager_status_enum.executing,)):
         print "WARNING: goal achieved, but manager lost.."
@@ -373,13 +372,18 @@ completesitecheck,firstcompleteprocedure,startprocedure
     else:
       print "WARNING: unknown action: ", op, params
       timeout_label = "unknown_action"
-    if timeout_label in self.op_timeout:
-      MessageGiver(self.op_timeout[timeout_label], self.on_timer_event, None).start((key_maker("manager","timeout",self.counter),))
+    if timeout_label in self._op_timeout:
+      MessageGiver(self._op_timeout[timeout_label], self.on_timer_event, None).start((key_maker("manager","timeout",self.counter),))
     
 
   ######################################################################################################
   ### action late implementation #######################################################################
   ######################################################################################################
+  
+  def if_bool_parameter_then_set(self, psym, v):
+    if psym in self._bool_parameters:
+      path_to_stage_param="/parameters/boolean_vars/" + psym
+      self.service_provider.set_parameter(path_to_stage_param, v)
   
   def process_request_reply(self, flag, message):
     if flag == "nau behaviour":
@@ -391,14 +395,11 @@ completesitecheck,firstcompleteprocedure,startprocedure
     elif flag == "pause":
       pass
     elif flag == "anxiety test":
-      path_to_stage_param="/parameters/boolean_vars/amanxietymanaged"
-      self.service_provider.set_parameter(path_to_stage_param, message)
+      self.if_bool_parameter_then_set("amanxietymanaged", message)
     elif flag == "engagement test":
-      path_to_stage_param="/parameters/boolean_vars/eamdisengaged"
-      self.service_provider.set_parameter(path_to_stage_param, not str(message).lower() == "true")
+      self.if_bool_parameter_then_set("eamdisengaged", not str(message).lower() == "true")
     elif flag == "type preference query":
-      path_to_stage_param="/parameters/boolean_vars/uselecteddivert"
-      self.service_provider.set_parameter(path_to_stage_param, str(message).lower() == "active")
+      self.if_bool_parameter_then_set("uselecteddivert", str(message).lower() == "active")
     else:
       print "TODO: do something about ", flag, message
   
