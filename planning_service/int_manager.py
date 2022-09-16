@@ -202,8 +202,8 @@ class Sensor(object): # XXX needs sorted out!
   def get_the_engagement_value_client(self, msg):
     rospy.wait_for_service('get_sensor_value')
     try:
-      sensor_querier = rospy.ServiceProxy('get_sensor_value', mode)
-      resp = sensor_querier(mode, plan_step)
+      sensor_querier = rospy.ServiceProxy('get_sensor_value', SensorValue)
+      resp = sensor_querier(msg)
       return resp.sensing_ok
     except rospy.ServiceException as e:
       print("Service call failed: %s"%e)
@@ -328,7 +328,11 @@ class int_manager(object):
       params = frame_dict["parameters"]
       if "boolean_vars" in params:
         self._bool_parameters = params["boolean_vars"]
-    
+    self._bool_sensors = {}
+    if "sensors" in frame_dict:
+      params = frame_dict["sensors"]
+      if "boolean_vars" in params:
+        self._bool_sensors = params["boolean_vars"]
 
   ######################################################################################################
   ### action early implementation ######################################################################
