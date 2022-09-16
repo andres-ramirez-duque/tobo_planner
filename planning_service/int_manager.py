@@ -152,7 +152,7 @@ class Planner(object):
     self.action_sub = rospy.Subscriber("/next_action", action_chain, s)
     
   def get_action(self, plan_step):
-    mode = "chicken"
+    mode = "Get an action"
     print "%%%%%%%%%%%%% PASSING INTO PLANNER", mode, plan_step
     self.get_an_action_client(mode, plan_step)
 
@@ -437,11 +437,11 @@ completesitecheck,firstcompleteprocedure,startprocedure
     elif flag == "type preference query":
       self.if_bool_parameter_then_set("uselecteddivert", str(message).lower() == "active")
     elif flag == "site check query":
-      self.if_bool_parameter_then_set("completedsitecheck", not str(message).lower() == "true")
+      self.if_bool_parameter_then_set("requiressitecheck", message)
     elif flag == "procedure ended ok query":
-      self.if_bool_parameter_then_set("completedprocedure", message)
+      self.if_bool_parameter_then_set("procedurehasfinished", message)
     elif flag == "procedure complete query":
-      self.if_bool_parameter_then_set("completedprocedure", message)
+      self.if_bool_parameter_then_set("procedurehasfinished", message)
     else:
       print "TODO: do something about ", flag, message
   

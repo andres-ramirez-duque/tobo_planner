@@ -2,14 +2,12 @@
 # Parameters for State Frames Scenario
 ---
 parameters:
-    boolean_vars:                 
-        #isyoungerchild:          false
+    boolean_vars:
         amanxietymanaged:         false
-        completedprocedure:       false
+        procedurehasfinished:       false 
         eamdisengaged:            false
-        completedsitecheck:       false
+        requiressitecheck:       false
         uselecteddivert:          false
-        #uselecteddivert:          false
         
     last_executed_action:         ''
     previous_action:              ''
@@ -18,7 +16,6 @@ parameters:
 planner:
     boolean_vars:
         doneidle:                     false
-        uselecteddivert:                     false
         uselectedcalming:                     false
         doneanxietytest:                     false
         okanxiety:                     false
@@ -49,13 +46,16 @@ planner:
         duringpreprocedure:                     false
         givenprocedureinfo:                     false
         duringsitecheck:                     false
+        completedsitecheck:                  false
         givenstrategyinfo:                     false
         duringprocedure:                     false
         firstperiod:                     false
         secondperiod:                     false
+        thirdperiod:                      false
         procedurestillrunning:                     false
         procedurecomplicationsoccurred:                     false
         waitedforproceduretoend:                     false
+        completedprocedure:       false
         debriefcomplete:                     false
         finishcomplete:                     false
         intropausecomplete:                     false

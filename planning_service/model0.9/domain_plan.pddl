@@ -44,9 +44,11 @@
     (givenprocedureinfo )
     (duringsitecheck )
     (completedsitecheck )
+    (requiressitecheck )
     (patientstrategyinfo ?a - activity)
     (givenstrategyinfo )
     (completedprocedure )
+    (procedurehasfinished )
     (duringprocedure )
     (thirdperiod)
     (firstperiod )
@@ -294,13 +296,29 @@
     (completedpreprocedure )
     (not (isreadyforprocedure ))
     (not (duringsitecheck ))
-    (not (completedsitecheck )))
+    (not (completedsitecheck ))
+    (not (requiressitecheck)))
     :effect
    (and
     (oneof (and
-    (duringsitecheck )) (and
-    (completedsitecheck )))
-    (haswaited ))
+        (requiressitecheck)) 
+      (and
+        (completedsitecheck )))
+        (haswaited ))
+  )
+  (:action ivstartsitecheck
+    :precondition (and
+    (introductioncomplete )
+    (intropausecomplete )
+    (completedpreprocedure)
+    (not (duringprocedure ))
+    (not (duringpreprocedure ))
+    (requiressitecheck)
+    (not (duringsitecheck )))
+    :effect
+   (and
+    (duringsitecheck )
+   )
   )
   (:action completesitecheck
     :precondition (and
@@ -339,6 +357,7 @@
     :precondition (and
     (not (duringpreprocedure ))
     (not (duringprocedure ))
+    (not (duringsitecheck ))
     (completedpreprocedure )
     (completedsitecheck )
     (not (isreadyforprocedure )))
@@ -366,9 +385,8 @@
     :effect
    (and
     (oneof (and
-    (completedprocedure )
-    (not (duringprocedure ))
-    ) (and
+    (procedurehasfinished ))
+    (and
     (procedurestillrunning )
     (secondperiod )
     (not (hassatisfieddivertionplan ))))
@@ -378,15 +396,17 @@
     :precondition (and
     (hassatisfieddivertionplan )
     (duringprocedure )
+    (procedurestillrunning )
     (secondperiod ))
     :effect
    (and
     (oneof (and
-    (completedprocedure )
-    (not (duringprocedure ))) (and
-    (procedurestillrunning )))
-    (not (secondperiod )) (thirdperiod))
+    (procedurehasfinished )
+    (not (procedurestillrunning ))) (and
+    (procedurestillrunning ) (thirdperiod)))
+    (not (secondperiod )))
   )
+  
   (:action waitforproceduretoend
     :precondition (and
     (procedurestillrunning )
@@ -395,14 +415,28 @@
     :effect
    (and
     (oneof (and
+    (procedurehasfinished )
     (not (procedurestillrunning ))
-    (not (thirdperiod))
-    (not (duringprocedure ))
-    (completedprocedure )) (and
+    )
+    (and
     (procedurecomplicationsoccurred )))
     (waitedforproceduretoend )
-    (haswaited ))
+    (haswaited )
+    (not (thirdperiod)))
   )
+  (:action completeprocedure
+    :precondition (and
+    (procedurehasfinished )
+    (not (procedurestillrunning ))
+    (duringprocedure )
+    )
+    :effect
+    (and
+      (not (duringprocedure ))
+      (completedprocedure )
+    )
+  )
+  
   (:action pimplementdivertionplancalm
     :parameters (?a - activity)
     :precondition (and
