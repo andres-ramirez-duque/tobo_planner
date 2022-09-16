@@ -321,20 +321,38 @@ class int_manager(object):
     self.add_flag(label, default)
 
   ### XXX So, we just have a managed true thing - we might also want to attach a removal at the end of preprocedure for cleanliness
-  def process_anxiety_test(self, op, params, t): ### XXX Do we have a return handler?
+  def process_anxiety_test(self, op, params, t):
     label = "anxiety test"
     options = ("true","false")
     default="true"
     self.service_provider.ask_for_user_input(options, default, t, key_maker("web server",label, self.counter))
     self.add_flag(label, default)
 
+  def process_procedure_complete_query(self, op, params, t):
+    label = "procedure complete query"
+    options = ("true","false")
+    default="true"
+    self.service_provider.ask_for_user_input(options, default, t, key_maker("web server",label, self.counter))
+    self.add_flag(label, default)
+
+  def process_site_check_query(self, op, params): 
+    label = "site check query"
+    options = ("true","false")
+    default="true"
+    self.service_provider.ask_for_user_input(options, default, -1, key_maker("web server",label, self.counter))
+    self.add_flag(label, default)
+
+  def process_wait_procedure_end(self, op, params): 
+    label = "procedure ended ok query"
+    options = ("true","false")
+    default="true"
+    self.service_provider.ask_for_user_input(options, default, -1, key_maker("web server",label, self.counter))
+    self.add_flag(label, default)
+
   def process_do_activity_action(self, op, params):
     label = "nau behaviour"
     self.add_flag(label, None)
 
-  """
-  Missing: ivquerysitecheck, firstcompleteprocedure, secondcompleteprocedure, waitforproceduretoend
-  """
 
   """
 doactivity,idle,goal,pause,anxietytest,wait,qtypepreference,engagementtest
@@ -365,6 +383,18 @@ completesitecheck,firstcompleteprocedure,startprocedure
     elif "engagementtest" in self._action_hierarchy[op]:
       timeout_label = "query_response"
       self.process_engagement_test(op, params, self._op_timeout[timeout_label])
+    elif "ivquerysitecheck" in self._action_hierarchy[op]:
+      timeout_label = "wait"
+      self.process_site_check_query(op, params)
+    elif "waitforproceduretoend" in self._action_hierarchy[op]:
+      timeout_label = "wait"
+      self.process_wait_procedure_end(op, params)
+    elif "firstcompleteprocedure" in self._action_hierarchy[op]:
+      timeout_label = "query_response"
+      self.process_procedure_complete_query(op, params, self._op_timeout[timeout_label])
+    elif "secondcompleteprocedure" in self._action_hierarchy[op]:
+      timeout_label = "query_response"
+      self.process_procedure_complete_query(op, params, self._op_timeout[timeout_label])
     elif "goal" in self._action_hierarchy[op]:
       if not self.set_status_if_in_one_of(manager_status_enum.after, (manager_status_enum.executing,)):
         print "WARNING: goal achieved, but manager lost.."
@@ -384,6 +414,10 @@ completesitecheck,firstcompleteprocedure,startprocedure
     if psym in self._bool_parameters:
       path_to_stage_param="/parameters/boolean_vars/" + psym
       self.service_provider.set_parameter(path_to_stage_param, v)
+
+  """
+  Missing: ivquerysitecheck x, firstcompleteprocedure x, secondcompleteprocedure x, waitforproceduretoend x
+  """
   
   def process_request_reply(self, flag, message):
     if flag == "nau behaviour":
@@ -400,6 +434,12 @@ completesitecheck,firstcompleteprocedure,startprocedure
       self.if_bool_parameter_then_set("eamdisengaged", not str(message).lower() == "true")
     elif flag == "type preference query":
       self.if_bool_parameter_then_set("uselecteddivert", str(message).lower() == "active")
+    elif flag == "site check query":
+      self.if_bool_parameter_then_set("completedsitecheck", not str(message).lower() == "true")
+    elif flag == "procedure ended ok query":
+      self.if_bool_parameter_then_set("completedprocedure", message)
+    elif flag == "procedure complete query":
+      self.if_bool_parameter_then_set("completedprocedure", message)
     else:
       print "TODO: do something about ", flag, message
   
