@@ -634,7 +634,8 @@ if __name__ == '__main__':
   from tobo_planner.msg import web_chain
   from tobo_planner.srv import PlannerMode,PlannerModeResponse
   from naoqi_bridge_msgs.srv import SetString
-
+  
+  yaml_file = rospy.get_param("/state_frame_fn")
   im = int_manager(ros_proxy(), yaml_file)
   rospy.init_node('ros_int_manager', anonymous=True)
   try:
