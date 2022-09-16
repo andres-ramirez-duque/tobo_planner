@@ -63,6 +63,13 @@ class dummy_web_server_message(object):
   def __str__(self):
     return "DWSM [" + str(self.plan_step) + "] " + str(self.request_type) + " " + str(self.parameters)
 
+class dummy_sensor_request_message(object):
+  def __init__(self, message, t, indx):
+    self.parameters = (message,)
+    self.request_type = t
+    self.plan_step = indx
+  def __str__(self):
+    return "DSRM [" + str(self.plan_step) + "] " + str(self.request_type) + " " + str(self.parameters)
 
 ######################################################################################################
 ### Timer util classes ###############################################################################
@@ -164,6 +171,42 @@ class Planner(object):
       print("Service call failed: %s"%e)
 
 
+class DummySensor(Timer):
+  def __init__(self, t, s):
+    super(DummyPlanner, self).__init__(t)
+    self.s=s
+  
+  def get_sensor_value(self, default, args):
+    obj, label, indx = key_deconstruct(args[0])
+    message_out = dummy_sensor_request_message(default, label, indx)
+    super(DummySensor, self).start((message_out,))
+    self.start((message_out,))
+    
+  def _trigger(self, args):
+    apply(self.s, (args,)) 
+
+class Sensor(object): # XXX needs sorted out!
+  def __init__(self, s):
+    self.action_sub = rospy.Subscriber("/sensors", action_chain, s)
+    
+  def get_sensor_value(self, default, args):
+    obj, label, indx = key_deconstruct(args[0])
+    msg = sensor_request_message() ### XXX Doesn't yet exist!
+    msg.plan_step = indx
+    msg.request_type = label
+    self.get_the_engagement_value_client(msg)
+    
+    print "%%%%%%%%%%%%% Querying Sensors for engagement", mode, plan_step
+    self.get_the_engagement_value_client(mode, plan_step)
+
+  def get_the_engagement_value_client(self, msg):
+    rospy.wait_for_service('get_sensor_value')
+    try:
+      sensor_querier = rospy.ServiceProxy('get_sensor_value', mode)
+      resp = sensor_querier(mode, plan_step)
+      return resp.sensing_ok
+    except rospy.ServiceException as e:
+      print("Service call failed: %s"%e)
 
 ######################################################################################################
 ### ros proxies/dummies entry point ##################################################################
@@ -184,7 +227,13 @@ class service_provider(object):
   def ask_for_user_input(self, options, default, timeout, k):
     self._last_tag = k
     self._ask_for_user_input(options, default, timeout, k)
-    
+  def _ask_for_user_input(self, options, default, timeout, k):
+    self.web_server.ask_for_user_input(options, default, timeout, (k,))
+  def sense_value(self, default, k):
+    self._last_tag = k
+    self._sense_value(default, k)
+  def _sense_value(self, default, k):
+    self.sensor_server.ask_for_sensor_value(default, k)
   def on_received_planner_action(self, message, t=None):
     apply(self.action_broadcast_f, (message, self._last_tag))
   def on_received_webserver_message(self, message, t=None):
@@ -214,8 +263,6 @@ class dummy_ros_proxy(service_provider):
     
   def _request_action(self, plan_index):
     self.planner.get_action(plan_index)
-  def _ask_for_user_input(self, options, default, timeout, k):
-    self.web_server.ask_for_user_input(options, default, timeout, (k,))
 
 class ros_proxy(service_provider):
   def __init__(self):
@@ -233,8 +280,6 @@ class ros_proxy(service_provider):
     rospy.set_param(path, v)
   def _request_action(self, plan_index):
     self.planner.get_action(plan_index)
-  def _ask_for_user_input(self, options, default, timeout, k):
-    self.web_server.ask_for_user_input(options, default, timeout, (k,))
   def set_last_executed_action(self, a):
     path_to_stage_param="/parameters/last_executed_action" # maybe just a yaml parameter?
     rospy.set_param(path_to_stage_param, a)
@@ -320,6 +365,9 @@ class int_manager(object):
     self.service_provider.ask_for_user_input(options, default, t, key_maker("web server",label, self.counter))
     self.add_flag(label, default)
 
+  def request_engagement_sensor_value(self, op, params):
+    self.service_provider.sense_value(key_maker("web server", "engagement sensed", self.counter))
+
   ### XXX So, we just have a managed true thing - we might also want to attach a removal at the end of preprocedure for cleanliness
   def process_anxiety_test(self, op, params, t):
     label = "anxiety test"
@@ -353,13 +401,6 @@ class int_manager(object):
     label = "nau behaviour"
     self.add_flag(label, None)
 
-
-  """
-doactivity,idle,goal,pause,anxietytest,wait,qtypepreference,engagementtest
-completepreprocedure,secondcompleteprocedure,startpreprocedure,amstartanxietymanagement,
-completesitecheck,firstcompleteprocedure,startprocedure
-"""
-
   def process_action_execution(self, op, params):
     self._current_action = reconstruct_action_str(op, params)
     self.set_status_if_in_one_of(manager_status_enum.executing, (manager_status_enum.planning,))
@@ -381,8 +422,13 @@ completesitecheck,firstcompleteprocedure,startprocedure
       timeout_label = "query_response"
       self.process_type_preference_query(op, params, self._op_timeout[timeout_label])
     elif "engagementtest" in self._action_hierarchy[op]:
-      timeout_label = "query_response"
-      self.process_engagement_test(op, params, self._op_timeout[timeout_label])
+      psym = "eamdisengaged"
+      if psym in self._bool_parameters:
+        timeout_label = "query_response"
+        self.process_engagement_test(op, params, self._op_timeout[timeout_label])
+      elif psym in self._bool_sensors:
+        timeout_label = "query_response"
+        self.request_engagement_sensor_value(op, params, self._op_timeout[timeout_label])
     elif "ivquerysitecheck" in self._action_hierarchy[op]:
       timeout_label = "wait"
       self.process_site_check_query(op, params)
@@ -414,10 +460,6 @@ completesitecheck,firstcompleteprocedure,startprocedure
     if psym in self._bool_parameters:
       path_to_stage_param="/parameters/boolean_vars/" + psym
       self.service_provider.set_parameter(path_to_stage_param, v)
-
-  """
-  Missing: ivquerysitecheck x, firstcompleteprocedure x, secondcompleteprocedure x, waitforproceduretoend x
-  """
   
   def process_request_reply(self, flag, message):
     if flag == "nau behaviour":
@@ -431,6 +473,8 @@ completesitecheck,firstcompleteprocedure,startprocedure
     elif flag == "anxiety test":
       self.if_bool_parameter_then_set("amanxietymanaged", message)
     elif flag == "engagement test":
+      self.if_bool_parameter_then_set("eamdisengaged", not str(message).lower() == "true")
+    elif flag == "engagement sensed":
       self.if_bool_parameter_then_set("eamdisengaged", not str(message).lower() == "true")
     elif flag == "type preference query":
       self.if_bool_parameter_then_set("uselecteddivert", str(message).lower() == "active")
@@ -551,6 +595,19 @@ completesitecheck,firstcompleteprocedure,startprocedure
   ######################################################################################################
   ### broadcast handlers ###############################################################################
   ######################################################################################################
+
+  def sensor_message_event(self, sensors_message): # a broadcast from the sensors
+    message = str(sensors_message.parameters[0])
+    t = sensors_message.request_type
+    indx = sensors_message.plan_step
+    if self.remove_request_if_active(t, indx):
+      if LOG:
+        print "++++ On timer event: " + str(message)
+      self.process_request_reply(t, message)
+      self.record_if_requests_completed()
+    else:
+      if LOG:
+        print "++++ Ignoring: ", str(web_message)
 
   def planner_message_event(self, action_message): # a broadcast from the planner
     op = action_message.action_type 
