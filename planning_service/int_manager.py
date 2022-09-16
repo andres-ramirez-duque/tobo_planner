@@ -27,6 +27,8 @@ def key_deconstruct(k):
   return bits[0], bits[1], int(bits[2])
   
 def reconstruct_action_str(op, params):
+  if len(params) == 0
+    return op
   return op+"_"+"_".join(params)
 
 """
