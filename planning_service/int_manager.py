@@ -371,6 +371,12 @@ completesitecheck,firstcompleteprocedure,startprocedure
       timeout_label = "doactivity"
     elif "idle" in self._action_hierarchy[op]:
       timeout_label = "idle"
+    elif "ivquerysitecheck" in self._action_hierarchy[op]:
+      timeout_label = "wait"
+      self.process_site_check_query(op, params)
+    elif "waitforproceduretoend" in self._action_hierarchy[op]:
+      timeout_label = "wait"
+      self.process_wait_procedure_end(op, params)
     elif "wait" in self._action_hierarchy[op]:
       self.process_wait(op, params)
       timeout_label = "wait"
@@ -385,12 +391,6 @@ completesitecheck,firstcompleteprocedure,startprocedure
     elif "engagementtest" in self._action_hierarchy[op]:
       timeout_label = "query_response"
       self.process_engagement_test(op, params, self._op_timeout[timeout_label])
-    elif "ivquerysitecheck" in self._action_hierarchy[op]:
-      timeout_label = "wait"
-      self.process_site_check_query(op, params)
-    elif "waitforproceduretoend" in self._action_hierarchy[op]:
-      timeout_label = "wait"
-      self.process_wait_procedure_end(op, params)
     elif "firstcompleteprocedure" in self._action_hierarchy[op]:
       timeout_label = "query_response"
       self.process_procedure_complete_query(op, params, self._op_timeout[timeout_label])
