@@ -59,10 +59,17 @@ class RosStateManagerProxy(StateManagerProxy):
   def __init__(self):
     self.rospy = __import__('rospy')
     params = self.rospy.get_param("/parameters")
-    if "boolean_vars" in params:
-      self.bool_vars = params["boolean_vars"]
-    if "multi_vars" in params:
-      self.multi_vars = params["multi_vars"]
+    sensor_vals = self.rospy.get_param("/sensors")
+    bool_items = []
+    for source in (params, sensor_vals):
+      if "boolean_vars" in source:
+        bool_items += source["boolean_vars"].items()
+    self.bool_vars = dict(bool_items)
+    multi_var_items = []
+    for source in (params, sensor_vals):
+      if "multi_vars" in source:
+        multi_var_items += params["multi_vars"]
+    self.multi_vars = dict(multi_source_items)
     self.executed_action = params["last_executed_action"]
     self.previous_action = params["previous_action"]
   def get_bool_var_value(self, v):
@@ -301,7 +308,7 @@ def parse_state_frame(sffn):
     frame_dict=yaml.safe_load(stream)
 
   frames=[]  
-  for source in ("parameters","interaction_manager","planner"):
+  for source in ("parameters","sensors","planner"):
     if not source in frame_dict : continue
     
     source_vars = frame_dict[source]
@@ -350,7 +357,7 @@ def add_value_to_state(P, frame, value_getter):
 
 def complete_state_description(P, state_frames, state_manager, internal_state_progressor):
   proposition_source_map={"parameters": state_manager,
-                          "interaction_manager": state_manager,
+                          "sensors": state_manager,
                           "planner":internal_state_progressor}
   for frame in state_frames :
     if not frame.source=="planner":
