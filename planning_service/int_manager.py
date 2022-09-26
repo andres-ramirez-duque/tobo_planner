@@ -243,7 +243,7 @@ class Sensors(object):
     msg.request_type = label
     rargs = "get_sensor_value", msg, SensorValue
     sr = SensorRequest(self.s)    
-    sr.make_request(rargs)
+    sr.make_request((rargs,))
 
 ######################################################################################################
 ### ros proxies/dummies entry point ##################################################################
