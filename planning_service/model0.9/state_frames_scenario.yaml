@@ -5,13 +5,17 @@ parameters:
     boolean_vars:
         amanxietymanaged:         false
         procedurehasfinished:       false 
-        eamdisengaged:            false
+#        eamdisengaged:            false
         requiressitecheck:       false
         uselecteddivert:          false
         
     last_executed_action:         ''
     previous_action:              ''
 
+
+sensors:
+    boolean_vars:
+        eamdisengaged:            false
 
 planner:
     boolean_vars:
