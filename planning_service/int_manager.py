@@ -131,7 +131,7 @@ class ServiceRequest(ThreadedRequest):
     resp = None
     try:
       sensor_querier = rospy.ServiceProxy(service, message_type)
-      resp = sensor_querier(msg, args)
+      resp = sensor_querier(msg)
     except rospy.ServiceException as e:
       print("Service call failed: %s"%e)
     self.service_response(resp, args)
@@ -228,7 +228,7 @@ class SensorRequest(ServiceRequest):
   
   def service_response(self, resp, args):
     _, msg, _ = args
-    message = dummy_sensor_message(resp, msg.request_type, msg.plan_step)
+    message = dummy_sensor_message(resp.sensor_value, msg.request_type, msg.plan_step)
     apply(self.s, (message,))
 
 class Sensors(object):
@@ -242,7 +242,7 @@ class Sensors(object):
     msg.plan_step = indx
     msg.request_type = label
     rargs = "get_sensor_value", msg, SensorValue
-    sr = SensorRequest()    
+    sr = SensorRequest(self.s)    
     sr.make_request(rargs)
 
 ######################################################################################################
