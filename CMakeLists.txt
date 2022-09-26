@@ -60,7 +60,7 @@ add_message_files(
 ## Generate services in the 'srv' folder
 add_service_files(
    FILES
-   SensorTransition.srv
+   SensorValue.srv
    PlannerMode.srv
 )
 

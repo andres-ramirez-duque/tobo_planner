@@ -1,7 +1,7 @@
 <launch>
   <param name="CMPLAN_ABS_PATH" value="/home/toboraspuk/catkin_ws/cmplan"/>
   <param name="PRP_ROOT" value="/home/toboraspuk/usrlib/prp"/>
-  <param name="costed_domain" value="true"/> <!--costed_domain:True-->
+  <param name="costed_domain" value="false"/> <!--costed_domain:True-->
   
   <param name="domain_fn" value="$(find tobo_planner)/planning_service/model0.9/domain_plan.pddl"/>
   <param name="background_knowledge_fn" value="$(find tobo_planner)/planning_service/model0.9/scenario_background_knowledge.pddl"/>

@@ -1,22 +1,17 @@
 #include "ros/ros.h"
-#include "tobo_planner/SensorTransition.h"
+#include "tobo_planner/SensorValue.h"
 #include <string>
 #include <stdlib.h>
 #include <time.h>       /* time */
 
-bool comparesensor(tobo_planner::SensorTransition::Request  &req,
-         tobo_planner::SensorTransition::Response &res)
+bool readsensor(tobo_planner::SensorValue::Request  &req,
+         tobo_planner::SensorValue::Response &res)
 {
-  int choice = 0;
-  srand (time(NULL));
-  std::string sensor ("[4] sensehighanxiety ");
-  
-  if (sensor.compare(req.sensor_transition) == 0){
-    choice = rand() % 2;
-  }
-  res.sensor_state = choice;
-  ROS_INFO("request: %s", req.sensor_transition.c_str());
-  ROS_INFO("sending back response: [%ld]", (long int)res.sensor_state);
+  std::string sensor_msg("Sensing engagement");
+  res.sensor_value = true;
+  res.message = sensor_msg;
+  ROS_INFO("request: %s", req.sensor_request.c_str());
+  ROS_INFO("sending back response: [%d]", res.sensor_value);
   return true;
 }
 
@@ -25,7 +20,7 @@ int main(int argc, char **argv)
   ros::init(argc, argv, "sensortransition_server");
   ros::NodeHandle n;
 
-  ros::ServiceServer service = n.advertiseService("sensortransition", comparesensor);
+  ros::ServiceServer service = n.advertiseService("get_sensor_value", readsensor);
   ROS_INFO("Sensing");
   ros::spin();
 

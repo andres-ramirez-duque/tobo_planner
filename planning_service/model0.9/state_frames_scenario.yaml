@@ -112,11 +112,13 @@ action_hierarchy:
     ivintroduction:               ivintroduction,introduction,doactivity
     ppamengagementtest:           ppamengagementtest,amengagementtest,engagementtest
     goal:                         goal
+    ivstartsitecheck:             ivstartsitecheck,startsitecheck
+    completeprocedure:            completeprocedure
 
 timeouts:                        
     doactivity:                   5
-    query_response:               2
+    query_response:               5
     idle:                         1
     pause:                        1
-    wait:                         1
+    #wait:                         1
     unknown_action:               0

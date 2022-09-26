@@ -1,0 +1,5 @@
+string sensor_request
+---
+bool sensor_value
+string message # informational, e.g. for error messages
+
