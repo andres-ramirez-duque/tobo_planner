@@ -18,7 +18,7 @@
   <node pkg="tobo_planner" type="int_manager.py" name="int_manager" output="screen">
   </node>
   
-  <node pkg="tobo_planner" type="sensortransition_server " name="sensor_server" output="screen">
+  <node pkg="tobo_planner" type="sensortransition_server" name="sensor_server" output="screen">
   </node>
 
 </launch>

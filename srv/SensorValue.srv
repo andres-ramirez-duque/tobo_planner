@@ -1,4 +1,5 @@
-string sensor_request
+string request_type
+int32 plan_step
 ---
 bool sensor_value
 string message # informational, e.g. for error messages

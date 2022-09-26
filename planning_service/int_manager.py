@@ -130,8 +130,8 @@ class ServiceRequest(ThreadedRequest):
     rospy.wait_for_service(service)
     resp = None
     try:
-      sensor_querier = rospy.ServiceProxy(service, message_type)
-      resp = sensor_querier(msg)
+      sensor_querier = rospy.ServiceProxy(service, msg_type)
+      resp = sensor_querier(msg.request_type,msg.plan_step)
     except rospy.ServiceException as e:
       print("Service call failed: %s"%e)
     self.service_response(resp, args)

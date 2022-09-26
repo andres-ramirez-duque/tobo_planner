@@ -10,7 +10,7 @@ bool readsensor(tobo_planner::SensorValue::Request  &req,
   std::string sensor_msg("Sensing engagement");
   res.sensor_value = true;
   res.message = sensor_msg;
-  ROS_INFO("request: %s", req.sensor_request.c_str());
+  ROS_INFO("request: %s", req.request_type.c_str());
   ROS_INFO("sending back response: [%d]", res.sensor_value);
   return true;
 }

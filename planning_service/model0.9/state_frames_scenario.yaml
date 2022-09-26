@@ -12,7 +12,6 @@ parameters:
     last_executed_action:         ''
     previous_action:              ''
 
-
 sensors:
     boolean_vars:
         eamdisengaged:            false
@@ -120,7 +119,7 @@ action_hierarchy:
     completeprocedure:            completeprocedure
 
 timeouts:                        
-    doactivity:                   5
+    doactivity:                   2
     query_response:               5
     idle:                         1
     pause:                        1
