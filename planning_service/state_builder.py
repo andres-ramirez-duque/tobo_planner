@@ -69,7 +69,7 @@ class RosStateManagerProxy(StateManagerProxy):
     for source in (params, sensor_vals):
       if "multi_vars" in source:
         multi_var_items += params["multi_vars"]
-    self.multi_vars = dict(multi_source_items)
+    self.multi_vars = dict(multi_var_items)
     self.executed_action = params["last_executed_action"]
     self.previous_action = params["previous_action"]
   def get_bool_var_value(self, v):
