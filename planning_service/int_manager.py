@@ -123,7 +123,7 @@ class ServiceRequest(ThreadedRequest):
     super(ServiceRequest, self).__init__()
   
   def _make_request(self, args):
-    make_service_request(args)
+    self.make_service_request(args)
 
   def make_service_request(self, args):
     service, msg, msg_type = args
