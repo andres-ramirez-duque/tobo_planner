@@ -7,7 +7,7 @@ import oyaml as yaml
 
 
 LOG=True
-ACTION_CHAIN_LAUNCHER_PAUSE=5
+ACTION_CHAIN_LAUNCHER_PAUSE=1
 ROS=False
 
 class Enum(object): 
@@ -354,19 +354,25 @@ def output_stats(proc_duration, action_sequence, action_hierarchy):
   print "Procedure duration: " + str(round(proc_duration, 2))
   print "Total number of actions: " + str(len(action_sequence))
   robot = sensing = proc_sensing = delayers = enders = others = 0
-  for a in action_sequence:
-    h = action_hierarchy[a]
+  for (op,params) in action_sequence:
+    h = action_hierarchy[op]
+    labelled = False
     if "doactivity" in h:
+      labelled=True
       robot+=1
     if "anxietytest" in h or "qtypepreference" in h or "engagementtest" in h:
+      labelled=True
       sensing +=1
     if "firstcompleteprocedure" in h or "secondcompleteprocedure" in h or "startsitecheck" in h:
+      labelled=True
       proc_sensing +=1
     if "wait" in h or "pause" in h:
+      labelled=True
       delayers += 1
     if "goal" in h:
+      labelled=True
       enders += 1
-    else: 
+    if not labelled: 
       others += 1
     
   print "-- Number of robot behaviours: " + str(robot)
@@ -375,6 +381,8 @@ def output_stats(proc_duration, action_sequence, action_hierarchy):
   print "-- Number of delaying actions: " + str(delayers)
   print "-- Number of other actions: " + str(others)
   print "-- Number of ender actions: " + str(enders)
+  print
+  print "Actions sequence: " + "; ".join(map(lambda (op,params): "(" + op + " " +" ".join(params)+")", action_sequence))
   
 ######################################################################################################
 ### interaction manager ##############################################################################
@@ -490,7 +498,7 @@ class int_manager(object):
     self.add_flag(label, None)
 
   def process_action_execution(self, op, params):
-    self._action_sequence.append(op)
+    self._action_sequence.append((op,params))
     self._current_action = reconstruct_action_str(op, params)
     self.set_status_if_in_one_of(manager_status_enum.executing, (manager_status_enum.planning,))
     timeout_label = None
