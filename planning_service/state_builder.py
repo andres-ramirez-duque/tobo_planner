@@ -58,8 +58,8 @@ class DummyStateManagerProxy(StateManagerProxy):
 class RosStateManagerProxy(StateManagerProxy):
   def __init__(self):
     self.rospy = __import__('rospy')
-    params = self.rospy.get_param("/parameters")
-    sensor_vals = self.rospy.get_param("/sensors")
+    params = self.rospy.get_param("/parameters", {})
+    sensor_vals = self.rospy.get_param("/sensors", {})
     bool_items = []
     for source in (params, sensor_vals):
       if "boolean_vars" in source:

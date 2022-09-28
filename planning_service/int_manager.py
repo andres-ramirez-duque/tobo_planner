@@ -337,6 +337,45 @@ class ros_proxy(service_provider):
     except rospy.ServiceException as e:
       print("Service call failed: %s"%e)
 
+
+######################################################################################################
+### stats ############################################################################################
+######################################################################################################
+
+
+def get_time():
+  try:
+    t=time.perf_counter()
+  except:
+    t=time.time()
+  return t
+
+def output_stats(proc_duration, action_sequence, action_hierarchy):
+  print "Procedure duration: " + str(round(proc_duration, 2))
+  print "Total number of actions: " + str(len(action_sequence))
+  robot = sensing = proc_sensing = delayers = enders = others = 0
+  for a in action_sequence:
+    h = action_hierarchy[a]
+    if "doactivity" in h:
+      robot+=1
+    if "anxietytest" in h or "qtypepreference" in h or "engagementtest" in h:
+      sensing +=1
+    if "firstcompleteprocedure" in h or "secondcompleteprocedure" in h or "startsitecheck" in h:
+      proc_sensing +=1
+    if "wait" in h or "pause" in h:
+      delayers += 1
+    if "goal" in h:
+      enders += 1
+    else: 
+      others += 1
+    
+  print "-- Number of robot behaviours: " + str(robot)
+  print "-- Number of sensing actions: " + str(sensing)
+  print "-- Number of procedure step query: " + str(proc_sensing)
+  print "-- Number of delaying actions: " + str(delayers)
+  print "-- Number of other actions: " + str(delayers)
+  print "-- Number of ender actions: " + str(enders)
+  
 ######################################################################################################
 ### interaction manager ##############################################################################
 ######################################################################################################
@@ -350,6 +389,8 @@ class int_manager(object):
     self.active_requests = []
     self.request_defaults = {}
     self.active_requests_lock = threading.Lock()
+    
+    self._action_sequence=[]
     
     self.status = manager_status_enum.before
     self.status_lock = threading.Lock()
@@ -449,6 +490,7 @@ class int_manager(object):
     self.add_flag(label, None)
 
   def process_action_execution(self, op, params):
+    self._action_sequence.append(op)
     self._current_action = reconstruct_action_str(op, params)
     self.set_status_if_in_one_of(manager_status_enum.executing, (manager_status_enum.planning,))
     timeout_label = None
@@ -731,10 +773,14 @@ class int_manager(object):
       time.sleep(ACTION_CHAIN_LAUNCHER_PAUSE)
 
   def init(self):
+    start_time = get_time()
     self.set_status_if_in_one_of(manager_status_enum.idle, (manager_status_enum.before,))
     self._start_action_chain_when_appropriate()
     if LOG:
       print "=== Completed Int manager loop ====="
+    end_time = get_time()
+    proc_duration = end_time - start_time
+    output_stats(proc_duration, self._action_sequence, self._action_hierarchy)
 
 if __name__ == '__main__':
   import rospy
