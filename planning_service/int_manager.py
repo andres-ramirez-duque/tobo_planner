@@ -363,7 +363,7 @@ def output_stats(proc_duration, action_sequence, action_hierarchy):
     if "anxietytest" in h or "qtypepreference" in h or "engagementtest" in h:
       labelled=True
       sensing +=1
-    if "firstcompleteprocedure" in h or "secondcompleteprocedure" in h or "startsitecheck" in h:
+    if "firstcompleteprocedure" in h or "secondcompleteprocedure" in h or "querysitecheck" in h or "waitforproceduretoend" in h:
       labelled=True
       proc_sensing +=1
     if "wait" in h or "pause" in h:
