@@ -373,7 +373,7 @@ def output_stats(proc_duration, action_sequence, action_hierarchy):
   print "-- Number of sensing actions: " + str(sensing)
   print "-- Number of procedure step query: " + str(proc_sensing)
   print "-- Number of delaying actions: " + str(delayers)
-  print "-- Number of other actions: " + str(delayers)
+  print "-- Number of other actions: " + str(others)
   print "-- Number of ender actions: " + str(enders)
   
 ######################################################################################################
