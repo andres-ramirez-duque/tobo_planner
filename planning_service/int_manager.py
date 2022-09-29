@@ -7,7 +7,7 @@ import oyaml as yaml
 
 
 LOG=True
-ACTION_CHAIN_LAUNCHER_PAUSE=1
+ACTION_CHAIN_LAUNCHER_PAUSE=10
 ROS=False
 
 class Enum(object): 
@@ -350,7 +350,7 @@ def get_time():
     t=time.time()
   return t
 
-def output_stats(proc_duration, action_sequence, action_hierarchy):
+def output_stats(proc_duration, action_sequence, action_hierarchy, timing_bank):
   print "Procedure duration: " + str(round(proc_duration, 2))
   print "Total number of actions: " + str(len(action_sequence))
   robot = sensing = proc_sensing = delayers = enders = others = 0
@@ -363,7 +363,7 @@ def output_stats(proc_duration, action_sequence, action_hierarchy):
     if "anxietytest" in h or "qtypepreference" in h or "engagementtest" in h:
       labelled=True
       sensing +=1
-    if "firstcompleteprocedure" in h or "secondcompleteprocedure" in h or "startsitecheck" in h:
+    if "firstcompleteprocedure" in h or "secondcompleteprocedure" in h or "ivquerysitecheck" in h or "waitforproceduretoend" in h:
       labelled=True
       proc_sensing +=1
     if "wait" in h or "pause" in h:
@@ -383,6 +383,11 @@ def output_stats(proc_duration, action_sequence, action_hierarchy):
   print "-- Number of ender actions: " + str(enders)
   print
   print "Actions sequence: " + "; ".join(map(lambda (op,params): "(" + op + " " +" ".join(params)+")", action_sequence))
+  print 
+  print "Additional timers:"
+  for label in timing_bank:
+    print "-- Timer for " + str(label) + ": " + str(round(timing_bank[label], 2))
+  
   
 ######################################################################################################
 ### interaction manager ##############################################################################
@@ -399,6 +404,8 @@ class int_manager(object):
     self.active_requests_lock = threading.Lock()
     
     self._action_sequence=[]
+    self._timing_bank = {}
+    self._open_timers = {}
     
     self.status = manager_status_enum.before
     self.status_lock = threading.Lock()
@@ -444,6 +451,7 @@ class int_manager(object):
     default="Defaulted"
     self.service_provider.ask_for_user_input(options, default, -1, key_maker("web server",label, self.counter))
     self.add_flag(label, default)
+    self._open_timers[label]=get_time()
 
   def process_type_preference_query(self, op, params, t):
     label = "type preference query"
@@ -451,6 +459,7 @@ class int_manager(object):
     default="active"
     self.service_provider.ask_for_user_input(options, default, t, key_maker("web server",label, self.counter))
     self.add_flag(label, default)
+    self._open_timers[label]=get_time()
     
   def process_engagement_test(self, op, params, t):
     label = "engagement test"
@@ -458,12 +467,14 @@ class int_manager(object):
     default="true"
     self.service_provider.ask_for_user_input(options, default, t, key_maker("web server",label, self.counter))
     self.add_flag(label, default)
+    self._open_timers[label]=get_time()
 
   def request_engagement_sensor_value(self, op, params):
     label = "engagement sensed"
     default="true"
     self.service_provider.sense_value(default, key_maker("sensors", "engagement sensed", self.counter))
     self.add_flag(label, default)
+    self._open_timers[label]=get_time()
 
   def process_anxiety_test(self, op, params, t):
     label = "anxiety test"
@@ -471,6 +482,7 @@ class int_manager(object):
     default="true"
     self.service_provider.ask_for_user_input(options, default, t, key_maker("web server",label, self.counter))
     self.add_flag(label, default)
+    self._open_timers[label]=get_time()
 
   def process_procedure_complete_query(self, op, params, t):
     label = "procedure complete query"
@@ -478,6 +490,7 @@ class int_manager(object):
     default="true"
     self.service_provider.ask_for_user_input(options, default, t, key_maker("web server",label, self.counter))
     self.add_flag(label, default)
+    self._open_timers[label]=get_time()
 
   def process_site_check_query(self, op, params): 
     label = "site check query"
@@ -485,6 +498,7 @@ class int_manager(object):
     default="true"
     self.service_provider.ask_for_user_input(options, default, -1, key_maker("web server",label, self.counter))
     self.add_flag(label, default)
+    self._open_timers[label]=get_time()
 
   def process_wait_procedure_end(self, op, params): 
     label = "procedure ended ok query"
@@ -492,10 +506,12 @@ class int_manager(object):
     default="true"
     self.service_provider.ask_for_user_input(options, default, -1, key_maker("web server",label, self.counter))
     self.add_flag(label, default)
+    self._open_timers[label]=get_time()
 
   def process_do_activity_action(self, op, params):
     label = "nau behaviour"
     self.add_flag(label, None)
+    self._open_timers[label]=get_time()
 
   def process_action_execution(self, op, params):
     self._action_sequence.append((op,params))
@@ -561,8 +577,16 @@ class int_manager(object):
       path_to_stage_param="/sensors/boolean_vars/" + psym
       self.service_provider.set_parameter(path_to_stage_param, v)
 
+  def update_timing_bank(self, label):
+    if label in self._open_timers:
+      if not label in self._timing_bank:
+        self._timing_bank[label]=0
+      self._timing_bank[label] += get_time() - self._open_timers[label]
+      self._open_timers.pop(label)
   
   def process_request_reply(self, flag, message):
+    self.update_timing_bank(flag)
+  
     if flag == "nau behaviour":
       pass
     elif flag == "idle":
@@ -711,6 +735,7 @@ class int_manager(object):
         print "++++ Ignoring: ", str(web_message)
 
   def planner_message_event(self, action_message): # a broadcast from the planner
+    self.update_timing_bank("planner")
     op = action_message.action_type 
     params = action_message.parameters
     indx = action_message.plan_step
@@ -748,7 +773,7 @@ class int_manager(object):
     if self.remove_request_if_active(t, indx):
       if LOG:
         print "++++ On timer event: " + str(action_str) + " from: ", t, indx
-      self.process_request_reply(t, message)
+      self.process_request_reply(t, action_message)
       self.record_if_requests_completed()
     else:
       if LOG:
@@ -771,6 +796,7 @@ class int_manager(object):
     if LOG:
       print "+ Calling planner..", self.counter
     if self.set_status_if_in_one_of(manager_status_enum.planning, (manager_status_enum.idle,)):
+      self._open_timers["planner"]=get_time()
       self.service_provider.request_action(self.counter)
 
   def _start_action_chain_when_appropriate(self):
@@ -788,7 +814,7 @@ class int_manager(object):
       print "=== Completed Int manager loop ====="
     end_time = get_time()
     proc_duration = end_time - start_time
-    output_stats(proc_duration, self._action_sequence, self._action_hierarchy)
+    output_stats(proc_duration, self._action_sequence, self._action_hierarchy, self._timing_bank)
 
 if __name__ == '__main__':
   import rospy
