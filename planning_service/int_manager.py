@@ -154,6 +154,11 @@ class DummyWebServer(Timer):
     message_out = dummy_web_server_message(default, label, indx)
     self.start((message_out,))
     
+  def request_change(self, params, args):
+    obj, label, indx = key_deconstruct(args[0])
+    message_out = dummy_web_server_message(None, label, indx)
+    print "Making web server request: " + str(params)  
+    
   def _trigger(self, message):
     apply(self.s, (message,))
 
@@ -162,6 +167,7 @@ class WebServer(object):
   def __init__(self, s):
     self.web_chain_sub = rospy.Subscriber("/request", web_chain, s) 
     self.web_chain_pub = rospy.Publisher('/listener_req', web_chain, queue_size=10)
+    self.web_chain_command = rospy.Publisher('/listener_com', web_chain, queue_size=10)
   
   def ask_for_user_input(self, options, default, timeout=10, args = (1,)):
     obj, label, indx = key_deconstruct(args[0])
@@ -171,6 +177,15 @@ class WebServer(object):
     msg.parameters = options
     msg.duration = timeout
     self.web_chain_pub.publish(msg)
+    
+  def request_change(self, params, args):
+    obj, label, indx = key_deconstruct(args[0])
+    msg = web_chain()
+    msg.plan_step = indx
+    msg.request_type = label
+    msg.parameters = params
+    msg.duration = -1
+    self.web_chain_command.publish(msg)    
     
 
 class DummyPlanner(Timer):
@@ -264,10 +279,10 @@ class service_provider(object):
   def request_action(self, plan_index):
     self._request_action(plan_index)
   def ask_for_user_input(self, options, default, timeout, k):
-    #self._last_tag = k
     self._ask_for_user_input(options, default, timeout, k)
+  def request_change(self, params, k):
+    self.web_server.request_change(params, (k,))
   def sense_value(self, default, k):
-    #self._last_tag = k
     self._sense_value(default, k)  
   def _request_action(self, plan_index):
     self.planner.get_action(plan_index)
@@ -275,12 +290,6 @@ class service_provider(object):
     self.web_server.ask_for_user_input(options, default, timeout, (k,))
   def _sense_value(self, default, k):
     self.sensor_server.get_sensor_value(default, (k,))
-  #def on_received_planner_action(self, message, t=None):
-  #  apply(self.action_broadcast_f, (message, self._last_tag))
-  #def on_received_webserver_message(self, message, t=None):
-  #  apply(self.webserver_broadcast_f, (message, self._last_tag))
-  #def disable_user_info_request(self, tag):
-  #  pass
   def set_parameter(self, path, v):
     print "[SP] Set: " + path + " to: " + str(v)
   def set_last_executed_action(self, a):
@@ -435,9 +444,25 @@ class int_manager(object):
   ### action early implementation ######################################################################
   ######################################################################################################
 
-  def ask_user_progress_proc_step(self, options, default, timeout, k):
-    self.service_provider.ask_for_user_input(options, default, timeout, k)
+  def tell_webserver_progress_proc_step(self, stage):
+    self.service_provider.request_change((stage,), key_maker("web server", "stage progression", self.counter))
 
+  def process_stage_changes(self, op, params):
+    if "introduction" in self._action_hierarchy[op]:
+      self.tell_webserver_progress_proc_step("introduction")
+    elif "startpreprocedure" in self._action_hierarchy[op]:
+      self.tell_webserver_progress_proc_step("preprocedure")
+    elif "startsitecheck" in self._action_hierarchy[op]:
+      self.tell_webserver_progress_proc_step("sitecheck")
+    elif "startprocedure" in self._action_hierarchy[op]:
+      self.tell_webserver_progress_proc_step("procedure")
+    elif "debrief" in self._action_hierarchy[op]:
+      self.tell_webserver_progress_proc_step("debrief")
+    elif "finish" in self._action_hierarchy[op]:
+      self.tell_webserver_progress_proc_step("finish")
+    elif "goal" in self._action_hierarchy[op]:
+      self.tell_webserver_progress_proc_step("goal")
+    
   def process_wait(self, op, params):
     label = "wait"
     options = ("Ready")
@@ -519,6 +544,9 @@ class int_manager(object):
     self._current_action = reconstruct_action_str(op, params)
     self.set_status_if_in_one_of(manager_status_enum.executing, (manager_status_enum.planning,))
     timeout_label = None
+    
+    self.process_stage_changes(op, params)
+    
     if "doactivity" in self._action_hierarchy[op]:
       self.process_do_activity_action(op, params)
       timeout_label = "doactivity"
@@ -558,7 +586,7 @@ class int_manager(object):
     elif "secondcompleteprocedure" in self._action_hierarchy[op]:
       timeout_label = "query_response"
       self.process_procedure_complete_query(op, params, self._op_timeout[timeout_label])
-    elif "goal" in self._action_hierarchy[op]:
+    elif "goal" in self._action_hierarchy[op]:      
       if not self.set_status_if_in_one_of(manager_status_enum.after, (manager_status_enum.executing,)):
         print "WARNING: goal achieved, but manager lost.."
       return
