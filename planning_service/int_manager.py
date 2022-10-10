@@ -453,6 +453,14 @@ class int_manager(object):
     self.service_provider.ask_for_user_input(options, default, t, key_maker("web server",label, self.counter))
     self.add_flag(label, default)
     self._open_timers[label]=get_time()
+
+  def process_activity_preference_query(self, op, params, t):
+    label = "activity preference query"
+    s1,s2 = params[0:2]
+    default=s1
+    self.service_provider.ask_for_user_input((s1,s2), default, t, key_maker("web server",label, self.counter))
+    self.add_flag(label, default)
+    self._open_timers[label]=get_time()
     
   def process_engagement_test(self, op, params, t):
     label = "engagement test"
@@ -530,6 +538,9 @@ class int_manager(object):
     elif "anxietytest" in self._action_hierarchy[op]:
       timeout_label = "query_response"
       self.process_anxiety_test(op, params, self._op_timeout[timeout_label])
+    elif "qactivitypreference" in self._action_hierarchy[op]:
+      timeout_label = "query_response"
+      self.process_activity_preference_query(op, params, self._op_timeout[timeout_label])
     elif "qtypepreference" in self._action_hierarchy[op]:
       timeout_label = "query_response"
       self.process_type_preference_query(op, params, self._op_timeout[timeout_label])
@@ -596,6 +607,8 @@ class int_manager(object):
       self.if_bool_parameter_then_set("eamdisengaged", not str(message).lower() == "true")
     elif flag == "type preference query":
       self.if_bool_parameter_then_set("uselecteddivert", str(message).lower() == "active")
+    elif flag == "activity preference query":
+      self.if_bool_parameter_then_set("uselected " + str(message), True)
     elif flag == "site check query":
       self.if_bool_parameter_then_set("requiressitecheck", message)
     elif flag == "procedure ended ok query":
