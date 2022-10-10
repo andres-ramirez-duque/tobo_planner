@@ -438,13 +438,6 @@ class int_manager(object):
   def ask_user_progress_proc_step(self, options, default, timeout, k):
     self.service_provider.ask_for_user_input(options, default, timeout, k)
 
-  def process_progress_proc_step_action(self, op, params,t):
-    s1,s2 = params[0:2]
-    default = s1
-    label = "stage progression"
-    self.ask_user_progress_proc_step((s1,s2), s2, t, key_maker("web server",label, self.counter))
-    self.add_flag(label, default)
-
   def process_wait(self, op, params):
     label = "wait"
     options = ("Ready")
