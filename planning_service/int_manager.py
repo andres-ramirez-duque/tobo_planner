@@ -679,6 +679,10 @@ class int_manager(object):
     self.status_lock.release()
     return s
 
+  def force_set_status(self, status):
+    self.status_lock.acquire()
+    self.status = status
+    self.status_lock.release()
 
   ######################################################################################################
   ### active request maintenance #######################################################################
@@ -818,7 +822,7 @@ class int_manager(object):
     self._stop()
   
   def _stop(self):
-    pass
+    self.force_set_status(manager_status_enum.after)
 
   ######################################################################################################
   ### main loop ########################################################################################
