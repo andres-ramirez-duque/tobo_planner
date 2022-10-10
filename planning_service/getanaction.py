@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 
 import os, sys, subprocess
-
+import state_builder, make_prp_runner, planner
 
 ############################################################################################################
 ### defaults 
@@ -10,26 +10,6 @@ import os, sys, subprocess
 deadend_detection=True
 use_local_search=True
 keep_files=False
-
-
-############################################################################################################
-### local imports and ugly path stuff
-### parameters 
-############################################################################################################
-
-PRP_LOCATIONS=["/home/al/ukcan/planner-for-relevant-policies",
-               "/home/toboraspuk/usrlib/prp"]
-for loc in PRP_LOCATIONS:
-  if os.path.exists(loc):
-    PRP_ROOT=loc
-    break
-else:
-  print "ERROR: Cannot locate PRP in getanaction.py - add to PRP_LOCATIONS"
-  sys.exit(1)
-
-sys.path.append(PRP_ROOT+"/prp-scripts")
-import state_builder, make_prp_runner, planner
-
 
 ############################################################################################################
 ### parameters 
