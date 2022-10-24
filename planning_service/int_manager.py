@@ -336,7 +336,7 @@ class ros_proxy(service_provider):
     rospy.wait_for_service('/naoqi_driver/set_behavior')
     try:
       stop_action = rospy.ServiceProxy('/naoqi_driver/set_behavior', SetString)
-      resp = stop_action('stopAllBehaviors')
+      resp = stop_action(SetString('stopAllBehaviors'))
       print("Stoping NAO Behaviors")
       return resp.success
       try:
