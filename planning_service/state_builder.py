@@ -451,6 +451,7 @@ def _export_problem (P, fp, sp="  ", is_costed=False):
 
 def output_scenario(P, output_scenario_fn, is_costed):
   _export_problem(P, open(output_scenario_fn,'w'), is_costed=is_costed)
+  print ("INFO: pout.pddl created")
 
 def build_scenario(domain_fn, background_knowledge_fn, state_frame_fn, output_scenario_fn, is_ros=False, is_costed=False):
   P = make_current_scenario(domain_fn, background_knowledge_fn, state_frame_fn, output_scenario_fn, is_ros, is_costed)

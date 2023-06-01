@@ -11,7 +11,7 @@ from tobo_planner.srv import PlannerMode,PlannerModeResponse
 import getanaction as actionselector
 
 def handle_get_an_action(req):
-    pub = rospy.Publisher('next_action', action_chain, queue_size=10)
+    pub = rospy.Publisher('next_action', action_chain, queue_size=1)
     ac_msg = action_chain()
     ac_msg.caller_id = 0
     ac_msg.plan_step = req.plan_step
