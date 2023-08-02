@@ -119,9 +119,10 @@ action_hierarchy:
     completeprocedure:            completeprocedure
 
 timeouts:                        
-    doactivity:                   2
-    query_response:               5
-    idle:                         1
-    pause:                        1
+    doactivity:                   5 #90
+    query_response:               5 #20
+    idle:                         1 #15
+    pause:                        0
     wait:                         1
     unknown_action:               0
+    

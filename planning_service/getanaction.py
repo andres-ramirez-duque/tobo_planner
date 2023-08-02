@@ -40,6 +40,7 @@ def build_scenario(domain_fn, background_knowledge_fn, state_frame_fn, scenario_
 
 def get_next_action(domain_fn, scenario_fn, solution_fn, prp_root, cmplan_abs_path, is_costed):
   make_prp_runner.make_prp_runner(prp_root, solution_fn, deadend_detection, cmplan_abs_path, is_costed, use_local_search)
+  print ("INFO: cmplan created")
   run_a_command( ["chmod", "u+x", cmplan_abs_path])
   return planner.get_next_action(domain_fn, scenario_fn, cmplan_abs_path, solution_fn, is_costed)
 

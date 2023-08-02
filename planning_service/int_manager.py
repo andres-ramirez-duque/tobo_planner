@@ -838,7 +838,7 @@ class int_manager(object):
       self.service_provider.request_action(self.counter)
 
   def _start_action_chain_when_appropriate(self):
-    while not self.is_finished():
+    while not self.is_finished() and not rospy.is_shutdown():
       print "@@@@@@MainLoop Status: " + str(self.get_status_str())
       if self.is_ready():
         self.start_action_chain()
@@ -865,7 +865,7 @@ if __name__ == '__main__':
   
   yaml_file = rospy.get_param("/state_frame_fn")
   im = int_manager(ros_proxy(), yaml_file)
-  rospy.init_node('ros_int_manager', anonymous=True)
+  rospy.init_node('ros_int_manager')
   try:
     im.init()
   except rospy.exceptions.ROSInterruptException:
