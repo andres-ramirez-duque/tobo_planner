@@ -123,5 +123,5 @@ timeouts:
     query_response:               5
     idle:                         1
     pause:                        1
-    #wait:                         1
+    wait:                         1
     unknown_action:               0
