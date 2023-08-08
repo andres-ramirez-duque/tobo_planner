@@ -7,7 +7,6 @@ import oyaml as yaml
 
 
 LOG=True
-ACTION_CHAIN_LAUNCHER_PAUSE=10
 SENSE_THEN_VALIDATE=True
 ROS=False
 
@@ -865,7 +864,7 @@ class int_manager(object):
       print "@@@@@@MainLoop Status: " + str(self.get_status_str())
       if self.is_ready():
         self.start_action_chain()
-      time.sleep(ACTION_CHAIN_LAUNCHER_PAUSE)
+      time.sleep(self._op_timeout["action_chain_launcher_pause"])
 
   def init(self):
     start_time = get_time()

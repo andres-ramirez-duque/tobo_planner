@@ -125,4 +125,5 @@ timeouts:
     pause:                        0
     wait:                         1
     unknown_action:               0
+    action_chain_launcher_pause:  1
     
