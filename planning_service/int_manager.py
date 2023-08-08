@@ -8,6 +8,7 @@ import oyaml as yaml
 
 LOG=True
 ACTION_CHAIN_LAUNCHER_PAUSE=10
+SENSE_THEN_VALIDATE=True
 ROS=False
 
 class Enum(object): 
@@ -296,6 +297,8 @@ class service_provider(object):
     pass
   def stop(self, req):
     pass
+  def is_shutdown(self):
+    pass
 
 class dummy_ros_proxy(service_provider):
   def __init__(self, plan):
@@ -312,6 +315,8 @@ class dummy_ros_proxy(service_provider):
     pass
   def record_stop_listener(self, stop_f):
     pass
+  def is_shutdown(self):
+    return False
 
 class ros_proxy(service_provider):
   def __init__(self):
@@ -345,7 +350,8 @@ class ros_proxy(service_provider):
         print(message)
     except rospy.ServiceException as e:
       print("Service call failed: %s"%e)
-
+  def is_shutdown(self):
+    return rospy.is_shutdown()
 
 ######################################################################################################
 ### stats ############################################################################################
@@ -495,6 +501,14 @@ class int_manager(object):
     self.add_flag(label, default)
     self._open_timers[label]=get_time()
 
+  def process_engagement_validate(self, op, params, t, default="true"):
+    label = "engagement validate"
+    options = ("true","false")
+    #default="true"
+    self.service_provider.ask_for_user_input(options, default, t, key_maker("web server",label, self.counter))
+    self.add_flag(label, default)
+    self._open_timers[label]=get_time()
+
   def request_engagement_sensor_value(self, op, params):
     label = "engagement sensed"
     default="true"
@@ -632,6 +646,15 @@ class int_manager(object):
     elif flag == "engagement test":
       self.if_bool_parameter_then_set("eamdisengaged", not str(message).lower() == "true")
     elif flag == "engagement sensed":
+      if SENSE_THEN_VALIDATE:
+        op = "engagementtest"
+        params = []
+        timeout_label = "query_response"
+        t = self._op_timeout[timeout_label]
+        self.process_engagement_validate(op, params, t, default=str(message).lower())
+      else:
+        self.if_bool_parameter_then_set("eamdisengaged", not str(message).lower() == "true")
+    elif flag == "engagement validate":
       self.if_bool_parameter_then_set("eamdisengaged", not str(message).lower() == "true")
     elif flag == "type preference query":
       self.if_bool_parameter_then_set("uselecteddivert", str(message).lower() == "active")
@@ -770,7 +793,7 @@ class int_manager(object):
       self.record_if_requests_completed()
     else:
       if LOG:
-        print "++++ Ignoring: ", str(web_message)
+        print "++++ Ignoring: ", str(sensors_message)
 
   def planner_message_event(self, action_message): # a broadcast from the planner
     self.update_timing_bank("planner")
@@ -838,7 +861,7 @@ class int_manager(object):
       self.service_provider.request_action(self.counter)
 
   def _start_action_chain_when_appropriate(self):
-    while not self.is_finished() and not rospy.is_shutdown():
+    while not self.is_finished() and not self.service_provider.is_shutdown():
       print "@@@@@@MainLoop Status: " + str(self.get_status_str())
       if self.is_ready():
         self.start_action_chain()
