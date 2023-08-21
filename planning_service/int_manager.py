@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-import logging
+import logging, sys
 import threading
 import time
 import oyaml as yaml
@@ -127,14 +127,15 @@ class ServiceRequest(ThreadedRequest):
 
   def make_service_request(self, args):
     service, msg, msg_type = args
-    rospy.wait_for_service(service)
+    rospy.wait_for_service(service, timeout=10)
     resp = None
     try:
       sensor_querier = rospy.ServiceProxy(service, msg_type)
       resp = sensor_querier(msg.request_type,msg.plan_step)
+      self.service_response(resp, args)
     except rospy.ServiceException as e:
       print("Service call failed: %s"%e)
-    self.service_response(resp, args)
+    
 
   def service_response(self, resp, args):
     pass
@@ -505,7 +506,9 @@ class int_manager(object):
     options = ("true","false")
     #default="true"
     self.service_provider.ask_for_user_input(options, default, t, key_maker("web server",label, self.counter))
-    self.add_flag(label, default)
+    #self.add_flag(label, default) XXX we have lock
+    self.active_requests.append(label)
+    self.request_defaults[label]=default
     self._open_timers[label]=get_time()
 
   def request_engagement_sensor_value(self, op, params):
@@ -651,6 +654,7 @@ class int_manager(object):
         timeout_label = "query_response"
         t = self._op_timeout[timeout_label]
         self.process_engagement_validate(op, params, t, default=str(message).lower())
+        MessageGiver(t, self.on_timer_event, None).start((key_maker("manager","timeout", self.counter),))
       else:
         self.if_bool_parameter_then_set("eamdisengaged", not str(message).lower() == "true")
     elif flag == "engagement validate":
@@ -762,11 +766,13 @@ class int_manager(object):
       if self.counter == indx :
         if LOG:
           print "@TIMEOUT:"
-        for flag in self.active_requests:
+        
+        cp_active_requests = self.active_requests[:]
+        for flag in cp_active_requests:
           self.process_request_reply(flag, self.request_defaults[flag])
           self.handle_disengagements(flag)
-            
-        del self.active_requests[:]
+          self.active_requests.remove(flag)
+          
         self._record_if_requests_completed()
       else:
         if LOG:
