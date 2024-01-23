@@ -1,14 +1,43 @@
 #!/usr/bin/env python
-import logging, sys
+import logging, sys, os
 import threading
 import time
 import oyaml as yaml
-
-
+from datetime import datetime
+import enum
 
 LOG=True
 SENSE_THEN_VALIDATE=True
 ROS=False
+root = "run_logs" # might want complete path?
+if not os.path.exists(root):
+  os.makedirs(root)
+def get_now_str():
+  now = datetime.now()
+  return now.strftime("%d-%m-%Y_%H-%M-%S-%f")[:-3]
+report_fn = root + "/run-log_" + get_now_str()
+REPORT_F = open(report_fn, 'w')
+
+class LogLevel (enum.Enum):
+  flow = 0
+  info = 1
+  
+  def __lt__(self, other):
+    if self.__class__ is other.__class__:
+      return self.value < other.value
+    return None
+  def get_level_prefix(self):
+    return str(self.value)
+
+
+def add_report(s, level=LogLevel.info):
+  report = [level.get_level_prefix(), get_now_str(), str(s)]
+  REPORT_F.write("@".join(report)+"\n")
+def flush_log():
+  REPORT_F.flush()
+def end_log():
+  REPORT_F.close()
+  print ("Log at: " + str(report_fn))
 
 class Enum(object): 
   def __init__(self, tupleList):
@@ -278,12 +307,18 @@ class service_provider(object):
     self.record_stop_listener(stop_f)
     
   def request_action(self, plan_index):
+    add_report("Requested action from planner, index: " + str(plan_index), LogLevel.flow)
     self._request_action(plan_index)
   def ask_for_user_input(self, options, default, timeout, k):
+    add_report("Requested info from user, k: " + str(k), LogLevel.flow)
+    add_report("Request, choices: " + str(options) + ", default: " + str(default) + ", timeout: " + str(timeout) + ", k: " + str(k))
     self._ask_for_user_input(options, default, timeout, k)
   def request_change(self, params, k):
+    add_report("Request webserver stage change: " + str(params) + ", k: " + str(k))
     self.web_server.request_change(params, (k,))
   def sense_value(self, default, k):
+    add_report("Requested sensor reading, k: " + str(k), LogLevel.flow)
+    add_report("Sensor request, default: " + str(default) + ", k: " + str(k))
     self._sense_value(default, k)  
   def _request_action(self, plan_index):
     self.planner.get_action(plan_index)
@@ -292,6 +327,7 @@ class service_provider(object):
   def _sense_value(self, default, k):
     self.sensor_server.get_sensor_value(default, (k,))
   def set_parameter(self, path, v):
+    add_report("Setting parameter: " + str(path) + " to: " + str(v))
     print "[SP] Set: " + path + " to: " + str(v)
   def set_last_executed_action(self, a):
     pass
@@ -333,6 +369,7 @@ class ros_proxy(service_provider):
   def record_stop_listener(self, stop_f):
     rospy.Service('/stop_nao', PlannerMode, stop_f)
   def set_parameter(self, path, v):
+    add_report("Setting parameter: " + str(path) + " to: " + str(v))
     rospy.set_param(path, v)
   def set_last_executed_action(self, a):
     path_to_stage_param="/parameters/last_executed_action" # maybe just a yaml parameter?
@@ -365,9 +402,9 @@ def get_time():
     t=time.time()
   return t
 
-def output_stats(proc_duration, action_sequence, action_hierarchy, timing_bank):
-  print "Procedure duration: " + str(round(proc_duration, 2))
-  print "Total number of actions: " + str(len(action_sequence))
+def get_output_stats(proc_duration, action_sequence, action_hierarchy, timing_bank):
+  l = ["Procedure duration: " + str(round(proc_duration, 2))]
+  l.append( "Total number of actions: " + str(len(action_sequence)))
   robot = sensing = proc_sensing = delayers = enders = others = 0
   for (op,params) in action_sequence:
     h = action_hierarchy[op]
@@ -390,18 +427,22 @@ def output_stats(proc_duration, action_sequence, action_hierarchy, timing_bank):
     if not labelled: 
       others += 1
     
-  print "-- Number of robot behaviours: " + str(robot)
-  print "-- Number of sensing actions: " + str(sensing)
-  print "-- Number of procedure step query: " + str(proc_sensing)
-  print "-- Number of delaying actions: " + str(delayers)
-  print "-- Number of other actions: " + str(others)
-  print "-- Number of ender actions: " + str(enders)
-  print
-  print "Actions sequence: " + "; ".join(map(lambda (op,params): "(" + op + " " +" ".join(params)+")", action_sequence))
-  print 
-  print "Additional timers:"
+  l.append( "-- Number of robot behaviours: " + str(robot))
+  l.append( "-- Number of sensing actions: " + str(sensing))
+  l.append( "-- Number of procedure step query: " + str(proc_sensing))
+  l.append( "-- Number of delaying actions: " + str(delayers))
+  l.append( "-- Number of other actions: " + str(others))
+  l.append( "-- Number of ender actions: " + str(enders))
+  l.append("")
+  l.append( "Actions sequence: ")
+  for a in action_sequence:
+    (op,params) = a
+    l.append("(" + op + " " +" ".join(params)+")")
+  l.append("")
+  l.append( "Additional timers:")
   for label in timing_bank:
-    print "-- Timer for " + str(label) + ": " + str(round(timing_bank[label], 2))
+    l.append( "-- Timer for " + str(label) + ": " + str(round(timing_bank[label], 2)))
+  return l
   
   
 ######################################################################################################
@@ -610,6 +651,7 @@ class int_manager(object):
       print "WARNING: unknown action: ", op, params
       timeout_label = "unknown_action"
     if timeout_label in self._op_timeout:
+      
       MessageGiver(self._op_timeout[timeout_label], self.on_timer_event, None).start((key_maker("manager","timeout",self.counter),))
     
 
@@ -740,7 +782,9 @@ class int_manager(object):
     if len(self.active_requests) == 0:
       self.service_provider.set_last_executed_action(self._current_action)
       self._current_action=None
+      add_report("All requests complete, current status " + self.get_status_str() + " attempting to transition from `executing' to `idle'", LogLevel.flow)
       self.set_status_if_in_one_of(manager_status_enum.idle, (manager_status_enum.executing,))
+      
   
   def handle_disengagements(self, flag):
     if flag == "stage progression":
@@ -766,9 +810,10 @@ class int_manager(object):
       if self.counter == indx :
         if LOG:
           print "@TIMEOUT:"
-        
+        add_report("Timeout: index: " + str(indx), LogLevel.flow)
         cp_active_requests = self.active_requests[:]
         for flag in cp_active_requests:
+          add_report("Timeout: setting flag: " + str(flag) + " to "+ str(self.request_defaults[flag]) + " and removing request.")
           self.process_request_reply(flag, self.request_defaults[flag])
           self.handle_disengagements(flag)
           self.active_requests.remove(flag)
@@ -791,6 +836,8 @@ class int_manager(object):
     message = str(sensors_message.parameters[0])
     t = sensors_message.request_type
     indx = sensors_message.plan_step
+    add_report("Received message from sensors, index: " + str(indx), LogLevel.flow)
+    add_report("Type: " + str(t)+", message " + str(message) + ", index: " + str(indx))
     if self.remove_request_if_active(t, indx):
       if LOG:
         print "++++ Sensor message (" + str(t)+"): " + str(message)
@@ -799,12 +846,15 @@ class int_manager(object):
     else:
       if LOG:
         print "++++ Ignoring: ", str(sensors_message)
+      add_report("Ignoring sensor reply (request already satisfied): " + str(t)+", message " + str(message) + ", index: " + str(indx))
 
   def planner_message_event(self, action_message): # a broadcast from the planner
     self.update_timing_bank("planner")
     op = action_message.action_type 
     params = action_message.parameters
     indx = action_message.plan_step
+    add_report("Received message from planner, index: " + str(indx), LogLevel.flow)
+    add_report("Action: " + str(op)+" " + " ".join(params) + ", index: " + str(indx))
     if LOG:
         print "++++ Planner response: ("+str(op)+ " " + " ".join(map(lambda x: str(x), params)) +")"
     self.process_action_execution(op, params)
@@ -813,6 +863,9 @@ class int_manager(object):
     message = str(web_message.parameters[0])
     t = web_message.request_type
     indx = web_message.plan_step
+    add_report("Received message from webserver, index: " + str(indx), LogLevel.flow)
+    add_report("Type: " + str(t)+", message " + str(message) + ", index: " + str(indx))
+    
     
     if self.remove_request_if_active(t, indx):
       if LOG:
@@ -822,6 +875,7 @@ class int_manager(object):
     else:
       if LOG:
         print "++++ Ignoring: ", str(web_message)
+      add_report("Ignoring webserver reply (request already satisfied): " + str(t)+", message " + str(message) + ", index: " + str(indx))
 
   def on_timer_event(self, message, k): # timeout event
     obj, t, indx = key_deconstruct(k)
@@ -835,7 +889,8 @@ class int_manager(object):
     action_str = reconstruct_action_str(action_message.action_type, action_message.parameters)
     t = "nau behaviour"
     indx = action_message.plan_step
-
+    add_report("Received message from nau, index: " + str(indx), LogLevel.flow)
+    add_report("Type: " + str(t)+", action " + str(action_str) + ", index: " + str(indx))
     if self.remove_request_if_active(t, indx):
       if LOG:
         print "++++ On timer event: " + str(action_str) + " from: ", t, indx
@@ -844,9 +899,11 @@ class int_manager(object):
     else:
       if LOG:
         print "++++ Ignoring: ", t, indx
+      add_report("Ignoring nau reply (request already satisfied): action " + str(action_str) + ", index: " + str(indx))
   
   def stop_message_event(self, req):
     self.service_provider.stop(req)
+    add_report("Stop message received - stopping!", LogLevel.flow)
     self._stop()
   
   def _stop(self):
@@ -862,8 +919,10 @@ class int_manager(object):
     if LOG:
       print "+ Calling planner..", self.counter
     if self.set_status_if_in_one_of(manager_status_enum.planning, (manager_status_enum.idle,)):
+      add_report("Starting next iteration.. " + str(self.counter) , LogLevel.flow)
       self._open_timers["planner"]=get_time()
       self.service_provider.request_action(self.counter)
+      flush_log()
 
   def _start_action_chain_when_appropriate(self):
     while not self.is_finished() and not self.service_provider.is_shutdown():
@@ -880,7 +939,12 @@ class int_manager(object):
       print "=== Completed Int manager loop ====="
     end_time = get_time()
     proc_duration = end_time - start_time
-    output_stats(proc_duration, self._action_sequence, self._action_hierarchy, self._timing_bank)
+    add_report("Completed interaction... total time: " + str(round(proc_duration, 2)), LogLevel.flow)
+    stat_l = get_output_stats(proc_duration, self._action_sequence, self._action_hierarchy, self._timing_bank)
+    for e in stat_l:
+      add_report(str(e))
+    print ("\n".join(stat_l))
+    end_log()
 
 if __name__ == '__main__':
   import rospy
