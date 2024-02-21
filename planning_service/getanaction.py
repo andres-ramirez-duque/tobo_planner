@@ -35,8 +35,8 @@ class dummy_parameter_service(parameter_service):
 ### get an action functions
 ############################################################################################################
 
-def build_scenario(domain_fn, background_knowledge_fn, state_frame_fn, scenario_fn, is_ros, is_costed):
-  state_builder.build_scenario(domain_fn, background_knowledge_fn, state_frame_fn, scenario_fn, is_ros, is_costed)
+def build_scenario(domain_fn, background_knowledge_fn, state_frame_fn, scenario_fn, source_mode, is_costed):
+  state_builder.build_scenario(domain_fn, background_knowledge_fn, state_frame_fn, scenario_fn, source_mode, is_costed)
 
 def get_next_action(domain_fn, scenario_fn, solution_fn, prp_root, cmplan_abs_path, is_costed):
   make_prp_runner.make_prp_runner(prp_root, solution_fn, deadend_detection, cmplan_abs_path, is_costed, use_local_search)
@@ -68,7 +68,7 @@ def cleanup(prp_root):
 #  sys.path.append(prp_root+"/prp-scripts")
 #  import state_builder, make_prp_runner, planner
 
-def get_an_action(parameter_service, is_ros=False):
+def get_an_action(parameter_service, source_mode="DUMMY"):
   is_costed = str(parameter_service.get_param_value('costed_domain', 'false')).lower()=="true"
   domain_fn = parameter_service.get_param_value('domain_fn', 'model0.2/domain_plan.pddl')
   #costed_domain_fn = parameter_service.get_param_value('costed_domain_fn', None)
@@ -80,7 +80,7 @@ def get_an_action(parameter_service, is_ros=False):
   # link_with_PRP(prp_root)
   cmplan_abs_path = parameter_service.get_param_value('CMPLAN_ABS_PATH','./cmplan')
     
-  build_scenario(domain_fn, background_knowledge_fn, state_frame_fn, scenario_fn, is_ros, is_costed)
+  build_scenario(domain_fn, background_knowledge_fn, state_frame_fn, scenario_fn, source_mode, is_costed)
   next_action = str(get_next_action(domain_fn, scenario_fn, solution_fn, prp_root, cmplan_abs_path, is_costed))
   print ("THE ACTION: " + next_action)
   cleanup(prp_root)

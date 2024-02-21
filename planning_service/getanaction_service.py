@@ -16,7 +16,7 @@ def handle_get_an_action(req):
     ac_msg.caller_id = 0
     ac_msg.plan_step = req.plan_step
     
-    plan_output = actionselector.get_an_action(actionselector.ros_parameter_service(), is_ros=True)
+    plan_output = actionselector.get_an_action(actionselector.ros_parameter_service(), source_mode="ROS")
     action_bits = plan_output.split("_")
 
     ac_msg.action_type = action_bits[0]

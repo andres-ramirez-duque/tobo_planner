@@ -5,6 +5,8 @@ import time
 import oyaml as yaml
 from datetime import datetime
 import enum
+import getanaction
+import dummy_state_manager as dsm
 
 LOG=True
 SENSE_THEN_VALIDATE=True
@@ -38,6 +40,44 @@ def flush_log():
 def end_log():
   REPORT_F.close()
   print ("Log at: " + str(report_fn))
+
+# yaml/dict functions
+def write_out_yaml(d, fn):
+  f = open(fn, 'w')
+  f.write(yaml.dump(d))
+  f.close()
+def get_dict_param_value(d, param):
+  v = _get_relevant_dict(param, d)
+  if not v == None:
+    k, rel_d = v
+    return rel_d[k]
+  print ("WARNING: looked up missing entry: " + str(param) + ", dictionary: " + str(d))
+def set_dict_param_value(d, param, v):
+  x = _get_relevant_dict(param, d)
+  if not x == None:
+    k, rel_d = x
+    rel_d[k] = v
+    return True
+  print ("WARNING: looked up missing entry: " + str(param) + ", dictionary: " + str(d))  
+  return False
+  
+def _get_relevant_dict(param, d):
+  if param.startswith("/"):
+    param = param[1:]
+    try:
+      i = param.index("/")
+      next_k = param[:i]
+      if next_k in d:
+        return _get_relevant_dict(param[i:], d[next_k])
+      else:
+        print ("WARNING: looked up missing entry - ending in: " + str(param) + ", found dictionary: " + str(d))
+    except:
+      if param in d:
+        return param, d
+      else:
+        print ("WARNING: looked up missing entry - ending in: " + str(param) + ", found dictionary: " + str(d))
+  else:
+    print ("Not expected param: " + str(param) + " in int_manager.py")
 
 class Enum(object): 
   def __init__(self, tupleList):
@@ -192,6 +232,31 @@ class DummyWebServer(Timer):
   def _trigger(self, message):
     apply(self.s, (message,))
 
+class SimulatedWebServer:
+  def __init__(self, s):
+    self.web_server_status = web_server_status_enum.idle
+    self.s=s
+  
+  def request_change(self, params, args):
+    obj, label, indx = key_deconstruct(args[0])
+    message_out = dummy_web_server_message(None, label, indx)
+    print "Ignoring request to Web server: " + str(params) 
+  
+  def ask_for_user_input(self, options, default, timeout=10, args = (1,)):
+    threading.Thread(target = self.request_input, args = (options, default, args[0])).start()
+  
+  def request_input(self, options, default, k):
+    obj, label, indx = key_deconstruct(k)
+    if options.__class__ == str:
+      choice = options
+      try:
+        input("  === PRESS RETURN TO CONTINUE! ===")
+      except: pass
+    else:  
+      choice = dsm.request_feature_value(obj+" "+label, options)
+    message_out = dummy_web_server_message(choice, label, indx)
+    apply(self.s, (message_out,))
+
 
 class WebServer(object):
   def __init__(self, s):
@@ -216,7 +281,25 @@ class WebServer(object):
     msg.parameters = params
     msg.duration = -1
     self.web_chain_command.publish(msg)    
+
+class PlannerProxy():
+  def __init__(self, params, s):
+    self.params_fn = params
+    self.s = s
+  
+  def get_action(self, plan_step):
+    print "SPAWNING NEW THREAD.."
+    threading.Thread(target = self.request_action, args = (plan_step, )).start()
     
+  def request_action(self, plan_step):
+    print "NEW PLANNER THREAD.."
+    parameter_service=getanaction.dummy_parameter_service(self.params_fn)
+    plan_output = getanaction.get_an_action(parameter_service, "YAML")
+    action_bits = plan_output.split("_")
+    op = action_bits[0]
+    params = action_bits[1:]
+    message_out = dummy_planner_chain_message(op, params, plan_step)
+    apply(self.s, (message_out,))
 
 class DummyPlanner(Timer):
   def __init__(self, t, s, steps):
@@ -337,14 +420,18 @@ class service_provider(object):
     pass
 
 class dummy_ros_proxy(service_provider):
-  def __init__(self, plan):
+  def __init__(self, plan, param_fn, yaml_fn):
     super(dummy_ros_proxy, self).__init__()
     self.plan=plan
+    self.param_fn = param_fn
+    self.yaml_fn = yaml_fn
     
   def init_planner(self, action_broadcast_f):
-    self.planner = DummyPlanner(2, action_broadcast_f, self.plan)
+    #self.planner = DummyPlanner(2, action_broadcast_f, self.plan)
+    self.planner = PlannerProxy(self.param_fn, action_broadcast_f)
   def init_webserver(self, webserver_broadcast_f):
-    self.web_server = DummyWebServer(10, webserver_broadcast_f)
+    #self.web_server = DummyWebServer(10, webserver_broadcast_f)
+    self.web_server = SimulatedWebServer(webserver_broadcast_f)
   def init_sensors(self, sensors_broadcast_f):
     self.sensor_server = DummySensors(1, sensors_broadcast_f)
   def record_nau_listener(self, nau_broadcast_f):
@@ -353,6 +440,16 @@ class dummy_ros_proxy(service_provider):
     pass
   def is_shutdown(self):
     return False
+  def set_parameter(self, path, v):
+    self.update_yaml(path, v)
+  def set_last_executed_action(self, a):
+    path_to_stage_param="/parameters/last_executed_action"
+    self.update_yaml(path_to_stage_param, a)
+  def update_yaml(self, path, v):
+    with open(self.yaml_fn, "r") as stream:
+      frame_dict=yaml.safe_load(stream)
+    set_dict_param_value(frame_dict, path, v)
+    write_out_yaml(frame_dict, self.yaml_fn)
 
 class ros_proxy(service_provider):
   def __init__(self):

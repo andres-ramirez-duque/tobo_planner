@@ -27,7 +27,7 @@ procedurepause
 ivdebrief_song1
 ivfinish_bye
 goal""".split()
-  im = IM.int_manager(IM.dummy_ros_proxy(plan), "model0.9/state_frames_scenario.yaml")
+  im = IM.int_manager(IM.dummy_ros_proxy(plan, "params/params0.9.txt", "model0.9/state_frames_scenario.yaml"), "model0.9/state_frames_scenario.yaml")
   if ADD_DUMMY_STOP_ON_ANY_KEY:
     from pynput import keyboard
     listener = keyboard.Listener(on_press=im.stop_message_event)

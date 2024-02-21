@@ -55,6 +55,27 @@ class DummyStateManagerProxy(StateManagerProxy):
     return self._dsm.request_value("which was the last executed action?")
   def get_previous_action(self):
     return self._dsm.request_value("which was the previous action?")
+
+class YAMLStateManagerProxy(StateManagerProxy):
+  def __init__(self, frames):
+    self.frames=dict(map(lambda f: (f.name,f),frames))
+  def get_bool_var_value(self, v):
+    return self.get_var_value(v)
+  def get_multi_var_value(self, v):
+    return self.get_var_value(v)
+  def get_var_value(self, v):
+    frame = self.frames[v]
+    return frame.default_v
+  def generate_values_in_state(self, v):
+    pass#return self._dsm.request_value_generator(v)
+    
+  def get_last_executed_action(self):
+    return self.frames["last_executed_action"].default_v
+    #return self._dsm.request_value("which was the last executed action?")
+  def get_previous_action(self):
+    return ""
+    #return self._dsm.request_value("which was the previous action?")    
+
 class RosStateManagerProxy(StateManagerProxy):
   def __init__(self):
     self.rospy = __import__('rospy')
@@ -326,6 +347,8 @@ def parse_state_frame(sffn):
     if "state_generators" in source_vars:
       for (bool_t_k, bool_v) in source_vars["state_generators"].items():
         frames.append(BooleanGeneratorFrame(bool_t_k, str(bool_v).lower()=="true", source))
+  
+  frames.append(StateValueFrame("last_executed_action", frame_dict["parameters"]["last_executed_action"], None, "parameters"))
   return frames
 
 def make_proposition(P, value):
@@ -369,10 +392,12 @@ def complete_state_description(P, state_frames, state_manager, internal_state_pr
       value_getter=proposition_source_map[frame.source]
       add_value_to_state(P, frame, value_getter)
 
-def get_state_manager(is_ros, frames):
+def get_state_manager(mode, frames):
   sm=None
-  if is_ros:
+  if mode == "ROS":
     sm=RosStateManagerProxy()
+  elif mode == "YAML":
+    sm=YAMLStateManagerProxy(frames)
   else:
     sm=DummyStateManagerProxy(frames)
   return sm
@@ -390,10 +415,10 @@ def get_next_states(dom, prob, a, is_costed=False):
     dom, prob = ncdom, ncprob
   return state_progressor.progress_state(dom, prob, a)
 
-def make_current_scenario(domain_fn, background_knowledge_fn, state_frame_fn, output_scenario_fn, is_ros, is_costed=False):
+def make_current_scenario(domain_fn, background_knowledge_fn, state_frame_fn, output_scenario_fn, source_mode, is_costed=False):
   P = parse_background_knowledge(domain_fn, background_knowledge_fn)
   state_frames = parse_state_frame(state_frame_fn)
-  state_manager = get_state_manager(is_ros, state_frames)
+  state_manager = get_state_manager(source_mode, state_frames)
   executor_a_complete = state_manager.get_last_executed_action()
   previous_a=state_manager.get_previous_action()
   if executor_a_complete == '':
@@ -453,8 +478,8 @@ def output_scenario(P, output_scenario_fn, is_costed):
   _export_problem(P, open(output_scenario_fn,'w'), is_costed=is_costed)
   print ("INFO: pout.pddl created")
 
-def build_scenario(domain_fn, background_knowledge_fn, state_frame_fn, output_scenario_fn, is_ros=False, is_costed=False):
-  P = make_current_scenario(domain_fn, background_knowledge_fn, state_frame_fn, output_scenario_fn, is_ros, is_costed)
+def build_scenario(domain_fn, background_knowledge_fn, state_frame_fn, output_scenario_fn, source_mode="DUMMY", is_costed=False):
+  P = make_current_scenario(domain_fn, background_knowledge_fn, state_frame_fn, output_scenario_fn, source_mode, is_costed)
   output_scenario(P, output_scenario_fn, is_costed)
 
 if __name__ == '__main__':
