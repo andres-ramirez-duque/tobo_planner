@@ -20,10 +20,11 @@ Usage: python planner.py <domain> <problem>
         """
 def get_next_action(domain_fn, prob_fn, cmplan_abs_path, pi_fn="human_policy.out", is_costed=False):
   
+  ok = False
   if os.path.exists(pi_fn):
-    ok,first_action = run_simulator(domain_fn, prob_fn, pi_fn, "prp", is_costed)
-  else:
-    ok = False
+    try:
+      ok,first_action = run_simulator(domain_fn, prob_fn, pi_fn, "prp", is_costed)
+    except: pass
   if ok:
     return first_action
   if LOG:
