@@ -1,133 +1,124 @@
-# params/state_frames_scenario.yaml
-# Parameters for State Frames Scenario
----
 parameters:
-    boolean_vars:
-        amanxietymanaged:         false
-        procedurehasfinished:       false
-        completedsitecheck:       false
-#        eamdisengaged:            false
-        requiressitecheck:       false
-        uselecteddivert:          false
-        forceaction:              false
-        requiresdisengage:        false
-        
-    last_executed_action:         ''
-    previous_action:              ''
-
-sensors:
-
+  boolean_vars:
+    amanxietymanaged: 'true'
+    procedurehasfinished: 'true'
+    completedsitecheck: 'true'
+    requiressitecheck: 'true'
+    uselecteddivert: false
+    forceaction: false
+    requiresdisengage: false
+  last_executed_action: ivfinish_bye
+  previous_action: ''
+sensors: null
 planner:
-    boolean_vars:
-        engaged:                  false
-        previouscalm:                 false
-        previousdivert:               false
-        previousinform:               false
-        doneidle:                     false
-        uselectedcalming:                     false
-        doneanxietytest:                     false
-        okanxiety:                     false
-        doneengagementtest:                     false
-        okengagement:                     false
-        haspaused:                     false
-        haswaited:                     false
-        introductioncomplete:                     false
-        hasdiverted:                     false
-        hascalmed:                     false
-        amrequiresanxietytest:                     false
-        amrequiresdivertion:                     false
-        amrequirescalming:                     false
-        amrequiresanxietyretest:                     false
-        amperforminganxietymanagement:                     false
-        amanxietymanagementcomplete:                     false
-        amrequiresengagementtest:                     false
-        amconeengagementtest:                     false
-        tomanageanxiety:                     false
-        amabort:                     false
-        eamdoneengagementtest:                     false
-        eamrequiresengagementtest:                     false
-        canmakedivertionplan:                     false
-        hasmadedivertionplan:                     false
-        hassatisfieddivertionplan:                     false
-        completedpreprocedure:                     false
-        haseducated:                     false
-        duringpreprocedure:                     false
-        givenprocedureinfo:                     false
-        duringsitecheck:                     false
-        givenstrategyinfo:                     false
-        duringprocedure:                     false
-        firstperiod:                     false
-        secondperiod:                     false
-        thirdperiod:                      false
-        procedurestillrunning:                     false
-        procedurecomplicationsoccurred:                     false
-        waitedforproceduretoend:                     false
-        completedprocedure:       false
-        debriefcomplete:                     false
-        finishcomplete:                     false
-        intropausecomplete:                     false
-        isreadytostart:                     false
-        isreadyforprocedure:                     false
-        procedurepausecomplete:                     false
-        doneactivity intro:                     false
-        doneactivity bye:                     false
-        doneactivity ivdescription:                     false
-        doneactivity song1:                     false
-        doneactivity song2:                     false
-        doneactivity dance1:                     false
-        doneactivity dance2:                     false
-        doneactivity leadmeditation:                     false
-        doneactivity taichi:                     false
-        doneactivity story:                     false
-        doneactivity quiz:                     false
-        doneactivity magic:                     false
-        doneactivity bowout:                     false
-        doneactivity strategyenforce:                     false
- 
-
+  boolean_vars:
+    engaged: false
+    previouscalm: false
+    previousdivert: false
+    previousinform: false
+    doneidle: false
+    uselectedcalming: false
+    doneanxietytest: false
+    okanxiety: false
+    doneengagementtest: false
+    okengagement: false
+    haspaused: false
+    haswaited: false
+    introductioncomplete: false
+    hasdiverted: false
+    hascalmed: false
+    amrequiresanxietytest: false
+    amrequiresdivertion: false
+    amrequirescalming: false
+    amrequiresanxietyretest: false
+    amperforminganxietymanagement: false
+    amanxietymanagementcomplete: false
+    amrequiresengagementtest: false
+    amconeengagementtest: false
+    tomanageanxiety: false
+    amabort: false
+    eamdoneengagementtest: false
+    eamrequiresengagementtest: false
+    canmakedivertionplan: false
+    hasmadedivertionplan: false
+    hassatisfieddivertionplan: false
+    completedpreprocedure: false
+    haseducated: false
+    duringpreprocedure: false
+    givenprocedureinfo: false
+    duringsitecheck: false
+    givenstrategyinfo: false
+    duringprocedure: false
+    firstperiod: false
+    secondperiod: false
+    thirdperiod: false
+    procedurestillrunning: false
+    procedurecomplicationsoccurred: false
+    waitedforproceduretoend: false
+    completedprocedure: false
+    debriefcomplete: false
+    finishcomplete: false
+    intropausecomplete: false
+    isreadytostart: false
+    isreadyforprocedure: false
+    procedurepausecomplete: false
+    doneactivity intro: false
+    doneactivity bye: false
+    doneactivity ivdescription: false
+    doneactivity song1: false
+    doneactivity song2: false
+    doneactivity dance1: false
+    doneactivity dance2: false
+    doneactivity leadmeditation: false
+    doneactivity taichi: false
+    doneactivity story: false
+    doneactivity quiz: false
+    doneactivity magic: false
+    doneactivity bowout: false
+    doneactivity strategyenforce: false
 action_hierarchy:
-    readyforprocedure:            readyforprocedure,wait
-    ppamretestanxiety:            ppamretestanxiety,amretestanxiety,anxietytest
-    ivstartpreprocedure:          ivstartpreprocedure,startpreprocedure
-    pameducateonprocedure:        pameducateonprocedure,doactivity
-    procedurepause:               procedurepause,pause
-    introductionpause:            introductionpause,pause
-    ppstartanxietymanagement:     ppstartanxietymanagement,amstartanxietymanagement
-    waitforproceduretoend:        waitforproceduretoend,wait
-    ivquerysitecheck:             ivquerysitecheck,querysitecheck,wait
-    secondcompleteprocedure:      secondcompleteprocedure
-    readytostart:                 readytostart,wait
-    ivlostengagement:             ivlostengagement,pplostengagement,lostengagement,doactivity
-    sceducateonprocedure:         sceducateonprocedure,doactivity
-    ppmakedivertionplan:          ppmakedivertionplan,makedivertionplan,qtypepreference
-    relaxduringcheck:             relaxduringcheck,calm,doactivity
-    ivfailedtoimpact:             ivfailedtoimpact,ppfailedtoimpact,failedtoimpact,doactivity
-    ppeamdivert:                  ppeamdivert,eamdivert,amdivert,divert,doactivity
-    ivcompletepreprocedure:       ivcompletepreprocedure,completepreprocedure
-    ivfinish:                     ivfinish,finish,doactivity
-    ppdivertor:                   ppdivertor,divertor,divert,doactivity
-    completesitecheck:            completesitecheck
-    pimplementdivertionplandivert: pimplementdivertionplandivert,implementdivertionplandivert,divert,doactivity
-    firstcompleteprocedure:       firstcompleteprocedure
-    pimplementdivertionplancalm:  pimplementdivertionplancalm,implementdivertionplancalm,calm,doactivity
-    ivstartprocedure:             ivstartprocedure,startprocedure
-    ppamtestanxiety:              ppamtestanxiety,amtestanxiety,anxietytest
-    ppeamcalm:                    ppeamcalm,eamcalm,amcalm,calm,doactivity
-    ivprocedurecomplications:     ivprocedurecomplications,procedurecomplications,idle
-    pmakedivertionplan:           pmakedivertionplan,makedivertionplan,qtypepreference
-    ivdebrief:                    ivdebrief,debrief,doactivity
-    ivintroduction:               ivintroduction,introduction,doactivity
-    ppamengagementtest:           ppamengagementtest,amengagementtest,engagementtest
-    goal:                         goal
-    ivstartsitecheck:             ivstartsitecheck,startsitecheck
-    completeprocedure:            completeprocedure
-
-timeouts:                        
-    doactivity:                   1 #90
-    query_response:               20 #20
-    idle:                         1 #15
-    pause:                        1
-    wait:                         20 # #
-    unknown_action:               0
-    action_chain_launcher_pause:  1
-    
+  readyforprocedure: readyforprocedure,wait
+  ppamretestanxiety: ppamretestanxiety,amretestanxiety,anxietytest
+  ivstartpreprocedure: ivstartpreprocedure,startpreprocedure
+  pameducateonprocedure: pameducateonprocedure,doactivity
+  procedurepause: procedurepause,pause
+  introductionpause: introductionpause,pause
+  ppstartanxietymanagement: ppstartanxietymanagement,amstartanxietymanagement
+  waitforproceduretoend: waitforproceduretoend,wait
+  ivquerysitecheck: ivquerysitecheck,querysitecheck,wait
+  secondcompleteprocedure: secondcompleteprocedure
+  readytostart: readytostart,wait
+  ivlostengagement: ivlostengagement,pplostengagement,lostengagement,doactivity
+  sceducateonprocedure: sceducateonprocedure,doactivity
+  ppmakedivertionplan: ppmakedivertionplan,makedivertionplan,qtypepreference
+  relaxduringcheck: relaxduringcheck,calm,doactivity
+  ivfailedtoimpact: ivfailedtoimpact,ppfailedtoimpact,failedtoimpact,doactivity
+  ppeamdivert: ppeamdivert,eamdivert,amdivert,divert,doactivity
+  ivcompletepreprocedure: ivcompletepreprocedure,completepreprocedure
+  ivfinish: ivfinish,finish,doactivity
+  ppdivertor: ppdivertor,divertor,divert,doactivity
+  completesitecheck: completesitecheck
+  pimplementdivertionplandivert: pimplementdivertionplandivert,implementdivertionplandivert,divert,doactivity
+  firstcompleteprocedure: firstcompleteprocedure
+  pimplementdivertionplancalm: pimplementdivertionplancalm,implementdivertionplancalm,calm,doactivity
+  ivstartprocedure: ivstartprocedure,startprocedure
+  ppamtestanxiety: ppamtestanxiety,amtestanxiety,anxietytest
+  ppeamcalm: ppeamcalm,eamcalm,amcalm,calm,doactivity
+  ivprocedurecomplications: ivprocedurecomplications,procedurecomplications,idle
+  pmakedivertionplan: pmakedivertionplan,makedivertionplan,qtypepreference
+  ivdebrief: ivdebrief,debrief,doactivity
+  ivintroduction: ivintroduction,introduction,doactivity
+  ppamengagementtest: ppamengagementtest,amengagementtest,engagementtest
+  goal: goal
+  ivstartsitecheck: ivstartsitecheck,startsitecheck
+  completeprocedure: completeprocedure
+  disengage: disengage
+  reengage: reengage
+timeouts:
+  doactivity: 1
+  query_response: 20
+  idle: 1
+  pause: 1
+  wait: 20
+  unknown_action: 0
+  action_chain_launcher_pause: 1

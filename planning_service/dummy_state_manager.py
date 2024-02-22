@@ -1,3 +1,16 @@
+import sys
+
+
+def clear_input_buffer():
+    try:
+        import msvcrt
+        while msvcrt.kbhit():
+            msvcrt.getch()
+    except ImportError:
+        import termios
+        import tty
+        sys.stdin.flush()
+        termios.tcflush(sys.stdin, termios.TCIOFLUSH)
 
 def request_feature_value(name, accepted_values):
   print ("    Choice: " + str(name))
@@ -5,6 +18,7 @@ def request_feature_value(name, accepted_values):
   for i, option in enumerate(accepted_values):
     print ("      Option [" + str(i) + "]: " + str(option))
   option_indexes=range(len(accepted_values))
+  clear_input_buffer()
   choice = int(input ("    >>> Select current state value from " + str(list(option_indexes))+": "))
   return ordered_options[choice]
 

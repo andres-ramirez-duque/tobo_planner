@@ -1,7 +1,7 @@
 import sys
 import int_manager as IM
 
-ADD_DUMMY_STOP_ON_ANY_KEY=False
+ADD_DUMMY_STOP_ON_ANY_KEY=True
 
 if __name__ == '__main__':
   #plan = ("doactivity2bold_intro_intronau_introstep_medium_low","progressprocstep1_introstep_preprocedure","goal")
@@ -37,12 +37,11 @@ goal""".split()
   im = IM.int_manager(IM.dummy_ros_proxy(plan, pfn, yfn), yfn)
   if ADD_DUMMY_STOP_ON_ANY_KEY:
     from pynput import keyboard
-    listener = keyboard.Listener(on_press=im.stop_message_event)
+    listener = keyboard.Listener(on_press=im.key_press_handler)
     listener.start()  # start to listen on a separate thread
   im.init()
   
 ## expected M12 issues:
 # hierarchy - no entries
-# missing state updates
-# site check complete is not set 
+# missing state updates 
 

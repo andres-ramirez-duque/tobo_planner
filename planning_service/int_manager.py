@@ -380,6 +380,7 @@ class Sensors(object):
 class service_provider(object):
   def __init__(self):
     self._last_tag = None
+    self.param_lock = threading.Lock()
 
   def initialise(self, action_broadcast_f, webserver_broadcast_f, sensors_broadcast_f,
                        nau_broadcast_f, stop_f):
@@ -441,7 +442,9 @@ class dummy_ros_proxy(service_provider):
   def is_shutdown(self):
     return False
   def set_parameter(self, path, v):
+    self.param_lock.acquire()    
     self.update_yaml(path, v)
+    self.param_lock.release()
   def set_last_executed_action(self, a):
     path_to_stage_param="/parameters/last_executed_action"
     self.update_yaml(path_to_stage_param, a)
@@ -751,6 +754,10 @@ class int_manager(object):
     elif "completesitecheck" in self._action_hierarchy[op]:
       timeout_label = "query_response"
       self.process_sitecheck_complete_query(op, params, self._op_timeout[timeout_label])
+    elif "disengage" in self._action_hierarchy[op]:
+        self.if_bool_parameter_then_set("forceaction", False)
+        self.if_bool_parameter_then_set("requiresdisengage", False)
+        timeout_label = "unknown_action"
     elif "goal" in self._action_hierarchy[op]:      
       if not self.set_status_if_in_one_of(manager_status_enum.after, (manager_status_enum.executing,)):
         print "WARNING: goal achieved, but manager lost.."
@@ -789,8 +796,6 @@ class int_manager(object):
       op = self._current_action.split("_")[0]
       if "ivfailedtoimpact" in self._action_hierarchy[op]:
         self.if_bool_parameter_then_set("completedsitecheck", True)
-      #if "introduction" in self._action_hierarchy[self._current_action.split("_")[0]]:
-      #  self.if_bool_parameter_then_set("engaged", True)
     elif flag == "idle":
       pass
     elif flag == "wait":
@@ -1016,6 +1021,25 @@ class int_manager(object):
       if LOG:
         print "++++ Ignoring: ", t, indx
       add_report("Ignoring nau reply (request already satisfied): action " + str(action_str) + ", index: " + str(indx))
+  
+  def register_disengagement(self):
+    print ("FORCING FORCE ACTION Etc.")
+    self.if_bool_parameter_then_set("forceaction", True)
+    self.if_bool_parameter_then_set("requiresdisengage", True)
+  
+  def key_press_handler(self, req):
+    try:
+      if req.char == 'q':
+        self.stop_message_event(req)
+      elif req.char == 'd':
+        self.register_disengagement()
+        #keyboard = Controller()
+        #keyboard.press(Key.enter)
+        #keyboard.release(Key.enter)
+      else:
+        pass
+    except : pass
+      
   
   def stop_message_event(self, req):
     self.service_provider.stop(req)
