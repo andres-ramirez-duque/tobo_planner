@@ -197,7 +197,7 @@ class FilteringISManager(InternalStateManager):
     for (i,p) in enumerate(scope):
       v=-1
       if p[0] in ds:
-        for cp in ds:
+        for cp in ds[p[0]]:
           ok = True
           for j in range(1, len(p)):
             if not p[j] == cp.ground_args[j-1]:
@@ -237,10 +237,10 @@ class FilteringISManager(InternalStateManager):
     for (i,p) in enumerate(scope):
       v = -1
       if p[0] in self._param_state:
-        for cp in self._param_state:
+        for cp in self._param_state[p[0]]:
           ok = True
           for j in range(1, len(p)):
-            if not p[j] == cp.ground_args[j-1]:
+            if not p[j] == cp.args[j-1][0]:
               ok = False
               break
           if ok:

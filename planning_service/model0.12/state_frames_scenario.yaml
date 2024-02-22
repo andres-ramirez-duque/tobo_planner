@@ -4,9 +4,23 @@ parameters:
     procedurehasfinished: 'true'
     completedsitecheck: 'true'
     requiressitecheck: 'true'
-    uselecteddivert: false
+    uselecteddivert: true
     forceaction: false
     requiresdisengage: false
+    uselected intro: false
+    uselected bye: false
+    uselected ivdescription: false
+    uselected song1: false
+    uselected song2: false
+    uselected dance1: false
+    uselected dance2: false
+    uselected leadmeditation: true
+    uselected taichi: false
+    uselected story: false
+    uselected quiz: false
+    uselected magic: false
+    uselected bowout: false
+    uselected strategyenforce: false
   last_executed_action: ivfinish_bye
   previous_action: ''
 sensors: null
@@ -97,6 +111,7 @@ action_hierarchy:
   ivcompletepreprocedure: ivcompletepreprocedure,completepreprocedure
   ivfinish: ivfinish,finish,doactivity
   ppdivertor: ppdivertor,divertor,divert,doactivity
+  ppcalmer: ppcalmer,calm,doactivity
   completesitecheck: completesitecheck
   pimplementdivertionplandivert: pimplementdivertionplandivert,implementdivertionplandivert,divert,doactivity
   firstcompleteprocedure: firstcompleteprocedure
@@ -107,13 +122,18 @@ action_hierarchy:
   ivprocedurecomplications: ivprocedurecomplications,procedurecomplications,idle
   pmakedivertionplan: pmakedivertionplan,makedivertionplan,qtypepreference
   ivdebrief: ivdebrief,debrief,doactivity
-  ivintroduction: ivintroduction,introduction,doactivity
+  ivintroduction: ivintroduction,introduction,doactivity,pointofengagement
   ppamengagementtest: ppamengagementtest,amengagementtest,engagementtest
   goal: goal
   ivstartsitecheck: ivstartsitecheck,startsitecheck
   completeprocedure: completeprocedure
-  disengage: disengage
-  reengage: reengage
+  disengage: disengage,disengagement
+  amdisengage: amdisengage,disengagement
+  reengage: reengage,pointofengagement
+  ppreengage: ppreengage,pointofengagement,qactivitypreference
+  amreengage: amreengage,pointofengagement
+  forceddivertor: ppdivertor,divertor,divert,doactivity,forcedactivity
+  forcedcalmer: ppcalmer,calm,doactivity,forcedactivity
 timeouts:
   doactivity: 1
   query_response: 20

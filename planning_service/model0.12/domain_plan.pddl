@@ -71,6 +71,7 @@
     (previouscalm )
     (previousdivert )
     (previousinform )
+    (uselected ?a - activity)
   )
 
   (:action readytostart
@@ -89,6 +90,7 @@
     (isreadytostart)
     (not (duringpreprocedure))
     (not (duringprocedure))
+    (not (introductioncomplete))
     (introducing ?a)
     (not (engaged))
     (not (forceaction)))
@@ -101,7 +103,96 @@
   (:action reengage
     :precondition (and
     (not (engaged))
-    (not (forceaction)))
+    (not (forceaction))
+    (not (amperforminganxietymanagement))
+    (not (duringpreprocedure)))
+    :effect
+   (and
+    (engaged))
+  )
+  ;(:action ppreengage
+  ;  :precondition (and
+  ;  (not (engaged))
+  ;  (not (forceaction))
+  ;  (not (amperforminganxietymanagement))
+  ;  (duringpreprocedure)
+  ;  )
+  ;  :effect
+  ; (and
+  ;  (engaged))
+  ;)
+  (:action ppreengage
+    :parameters (?a1 ?a2 - activity)
+    :precondition 
+    (and
+      (not (= ?a1 ?a2))
+      (not (engaged))
+      (not (doneactivity ?a1))
+      (not (doneactivity ?a2))
+      (diverting ?a2)
+    (not (forceaction))
+    (not (amperforminganxietymanagement))
+    (duringpreprocedure)
+    )
+    :effect
+    (and
+      (oneof
+        (uselected ?a1)
+        (uselected ?a2)
+      )
+      (engaged)
+      (forceaction)
+    )
+  )
+  (:action forceddivertor
+    :parameters (?a - activity)
+    :precondition (and
+    (not (amperforminganxietymanagement))
+    (duringpreprocedure)
+    (not (doneactivity ?a))
+    (diverting ?a)
+    (engaged)
+    (forceaction)
+    (uselected ?a)
+    )
+    :effect
+   (and
+    (previousdivert)
+    (not (previouscalm))
+    (not (previousinform))
+    (not (uselected ?a))
+    (hasdiverted)
+    (not (forceaction))
+    ;(doneactivity ?a)
+    )
+  )
+  (:action forcedcalmer
+    :parameters (?a - activity)
+    :precondition (and
+    (not (amperforminganxietymanagement))
+    (duringpreprocedure)
+    (not (doneactivity ?a))
+    (calming ?a)
+    (engaged)
+    (uselected ?a)
+    (forceaction)
+    )
+    :effect
+   (and
+    (previouscalm)
+    (not (previousdivert))
+    (not (previousinform))
+    (not (uselected ?a))
+    (not (forceaction))
+    (hascalmed)
+    ;(doneactivity ?a)
+    )
+  )
+  (:action amreengage
+    :precondition (and
+    (not (engaged))
+    (not (forceaction))
+    (amperforminganxietymanagement))
     :effect
    (and
     (engaged))
@@ -109,13 +200,45 @@
   (:action disengage
     :precondition (and
     (requiresdisengage)
-    (engaged))
+    (engaged)
+    (not (amperforminganxietymanagement)))
     :effect
    (and
     (not (engaged))
     (not (requiresdisengage))
     (not (forceaction)))
   )
+  (:action amdisengage
+    :precondition (and
+    (requiresdisengage)
+    (engaged)
+    (amperforminganxietymanagement))
+    :effect
+   (and
+    (not (engaged))
+    (not (requiresdisengage))
+    (not (forceaction)))
+  )
+  (:action ivlostengagement
+    :parameters (?a - activity)
+    :precondition (and
+    (duringpreprocedure )
+    (amperforminganxietymanagement)
+    (not (engaged))
+    (withdrawl ?a))
+    :effect
+   (and
+    (not (duringpreprocedure ))
+    (completedpreprocedure )
+    (completedsitecheck )
+    (completedprocedure )
+    (debriefcomplete )
+    (finishcomplete )
+    (amanxietymanagementcomplete )
+    (not (amperforminganxietymanagement))
+    (doneactivity ?a))
+  )
+  
   (:action introductionpause
     :precondition (and
     (not (duringpreprocedure))
@@ -243,7 +366,7 @@
     :effect
    (and
     (previouscalm)
-    (not (previouscalm))
+    (not (previousdivert))
     (not (previousinform))
     (hascalmed)
     (doneactivity ?a))

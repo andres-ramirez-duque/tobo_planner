@@ -715,6 +715,8 @@ class int_manager(object):
     if "doactivity" in self._action_hierarchy[op]:
       self.process_do_activity_action(op, params)
       timeout_label = "doactivity"
+      if "forcedactivity" in self._action_hierarchy[op]:
+        self.if_bool_parameter_then_set("forceaction", False)
     elif "idle" in self._action_hierarchy[op]:
       timeout_label = "idle"
     elif "ivquerysitecheck" in self._action_hierarchy[op]:
@@ -734,6 +736,8 @@ class int_manager(object):
     elif "qactivitypreference" in self._action_hierarchy[op]:
       timeout_label = "query_response"
       self.process_activity_preference_query(op, params, self._op_timeout[timeout_label])
+      if "ppreengage" in self._action_hierarchy[op]:
+        self.if_bool_parameter_then_set("forceaction", True)
     elif "qtypepreference" in self._action_hierarchy[op]:
       timeout_label = "query_response"
       self.process_type_preference_query(op, params, self._op_timeout[timeout_label])
@@ -754,7 +758,7 @@ class int_manager(object):
     elif "completesitecheck" in self._action_hierarchy[op]:
       timeout_label = "query_response"
       self.process_sitecheck_complete_query(op, params, self._op_timeout[timeout_label])
-    elif "disengage" in self._action_hierarchy[op]:
+    elif "disengagement" in self._action_hierarchy[op]:
         self.if_bool_parameter_then_set("forceaction", False)
         self.if_bool_parameter_then_set("requiresdisengage", False)
         timeout_label = "unknown_action"
@@ -794,7 +798,8 @@ class int_manager(object):
   
     if flag == "nau behaviour":
       op = self._current_action.split("_")[0]
-      if "ivfailedtoimpact" in self._action_hierarchy[op]:
+      if "ivfailedtoimpact" in self._action_hierarchy[op] or \
+        "ivlostengagement" in self._action_hierarchy[op] :
         self.if_bool_parameter_then_set("completedsitecheck", True)
     elif flag == "idle":
       pass
