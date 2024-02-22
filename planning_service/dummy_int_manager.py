@@ -1,3 +1,4 @@
+import sys
 import int_manager as IM
 
 ADD_DUMMY_STOP_ON_ANY_KEY=False
@@ -27,9 +28,21 @@ procedurepause
 ivdebrief_song1
 ivfinish_bye
 goal""".split()
-  im = IM.int_manager(IM.dummy_ros_proxy(plan, "params/params0.9.txt", "model0.9/state_frames_scenario.yaml"), "model0.9/state_frames_scenario.yaml")
+
+  
+  if len(sys.argv) > 1 and sys.argv[1] == "12":
+    pfn, yfn = "params/params0.12.txt", "model0.12/state_frames_scenario.yaml"
+  else:
+    pfn, yfn = "params/params0.9.txt", "model0.9/state_frames_scenario.yaml"
+  im = IM.int_manager(IM.dummy_ros_proxy(plan, pfn, yfn), yfn)
   if ADD_DUMMY_STOP_ON_ANY_KEY:
     from pynput import keyboard
     listener = keyboard.Listener(on_press=im.stop_message_event)
     listener.start()  # start to listen on a separate thread
   im.init()
+  
+## expected M12 issues:
+# hierarchy - no entries
+# missing state updates
+# site check complete is not set 
+

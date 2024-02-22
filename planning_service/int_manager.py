@@ -581,7 +581,7 @@ class int_manager(object):
     self._bool_sensors = {}
     if "sensors" in frame_dict:
       params = frame_dict["sensors"]
-      if "boolean_vars" in params:
+      if params and "boolean_vars" in params:
         self._bool_sensors = params["boolean_vars"]
 
   ######################################################################################################
@@ -672,6 +672,14 @@ class int_manager(object):
     self.add_flag(label, default)
     self._open_timers[label]=get_time()
 
+  def process_sitecheck_complete_query(self, op, params, t):
+    label = "site check complete query"
+    options = ("true","false")
+    default="true"
+    self.service_provider.ask_for_user_input(options, default, t, key_maker("web server",label, self.counter))
+    self.add_flag(label, default)
+    self._open_timers[label]=get_time()
+
   def process_site_check_query(self, op, params): 
     label = "site check query"
     options = ("true","false")
@@ -740,6 +748,9 @@ class int_manager(object):
     elif "secondcompleteprocedure" in self._action_hierarchy[op]:
       timeout_label = "query_response"
       self.process_procedure_complete_query(op, params, self._op_timeout[timeout_label])
+    elif "completesitecheck" in self._action_hierarchy[op]:
+      timeout_label = "query_response"
+      self.process_sitecheck_complete_query(op, params, self._op_timeout[timeout_label])
     elif "goal" in self._action_hierarchy[op]:      
       if not self.set_status_if_in_one_of(manager_status_enum.after, (manager_status_enum.executing,)):
         print "WARNING: goal achieved, but manager lost.."
@@ -775,7 +786,11 @@ class int_manager(object):
     self.update_timing_bank(flag)
   
     if flag == "nau behaviour":
-      pass
+      op = self._current_action.split("_")[0]
+      if "ivfailedtoimpact" in self._action_hierarchy[op]:
+        self.if_bool_parameter_then_set("completedsitecheck", True)
+      #if "introduction" in self._action_hierarchy[self._current_action.split("_")[0]]:
+      #  self.if_bool_parameter_then_set("engaged", True)
     elif flag == "idle":
       pass
     elif flag == "wait":
@@ -804,6 +819,10 @@ class int_manager(object):
       self.if_bool_parameter_then_set("uselected " + str(message), True)
     elif flag == "site check query":
       self.if_bool_parameter_then_set("requiressitecheck", message)
+      if str(message).lower() == "false":
+        self.if_bool_parameter_then_set("completedsitecheck", True)
+    elif flag == "site check complete query":
+      self.if_bool_parameter_then_set("completedsitecheck", message)
     elif flag == "procedure ended ok query":
       self.if_bool_parameter_then_set("procedurehasfinished", message)
     elif flag == "procedure complete query":
