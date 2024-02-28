@@ -1010,6 +1010,9 @@ class int_manager(object):
     add_report("Received message from webserver, index: " + str(indx), LogLevel.flow)
     add_report("Type: " + str(t)+", message " + str(message) + ", index: " + str(indx))
     
+    if str(t) == "register disengagement" :
+      self.register_disengagement()
+      return
     
     if self.remove_request_if_active(t, indx):
       if LOG:
