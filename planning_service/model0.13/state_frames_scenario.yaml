@@ -4,9 +4,11 @@ parameters:
     procedurehasfinished: 'true'
     completedsitecheck: 'true'
     requiressitecheck: 'true'
-    uselecteddivert: true
+    uselecteddivert: false
     forceaction: false
     requiresdisengage: false
+    age: false
+    iv: false
     uselected intro: false
     uselected bye: false
     uselected ivdescription: false
@@ -26,6 +28,7 @@ parameters:
 sensors: null
 planner:
   boolean_vars:
+    secondsitecheck: false
     engaged: false
     previouscalm: false
     previousdivert: false
@@ -95,9 +98,11 @@ action_hierarchy:
   ppamretestanxiety: ppamretestanxiety,amretestanxiety,anxietytest
   ivstartpreprocedure: ivstartpreprocedure,startpreprocedure
   pameducateonprocedure: pameducateonprocedure,doactivity
+  pameducateonprocedurey: pameducateonprocedurey,pameducateonprocedure,doactivity
   procedurepause: procedurepause,pause
   introductionpause: introductionpause,pause
   ppstartanxietymanagement: ppstartanxietymanagement,amstartanxietymanagement
+  ppstartanxietymanagementniv: ppstartanxietymanagementniv,ppstartanxietymanagement,amstartanxietymanagement
   waitforproceduretoend: waitforproceduretoend,wait
   ivquerysitecheck: ivquerysitecheck,querysitecheck,wait
   secondcompleteprocedure: secondcompleteprocedure
@@ -108,17 +113,23 @@ action_hierarchy:
   relaxduringcheck: relaxduringcheck,calm,doactivity
   ivfailedtoimpact: ivfailedtoimpact,ppfailedtoimpact,failedtoimpact,doactivity
   ppeamdivert: ppeamdivert,eamdivert,amdivert,divert,doactivity
+  ppeamdivertl: ppeamdivertl,ppeamdivert,eamdivert,amdivert,divert,doactivity
   ivcompletepreprocedure: ivcompletepreprocedure,completepreprocedure
+  ivcompletepreprocedureniv: ivcompletepreprocedureniv,ivcompletepreprocedure,completepreprocedure
   ivfinish: ivfinish,finish,doactivity
   ppdivertor: ppdivertor,divertor,divert,doactivity
   ppcalmer: ppcalmer,calm,doactivity
   completesitecheck: completesitecheck
+  completesitecheck2: completesitecheck2,completesitecheck
   pimplementdivertionplandivert: pimplementdivertionplandivert,implementdivertionplandivert,divert,doactivity
+  pimplementdivertionplandivertl: pimplementdivertionplandivertl,pimplementdivertionplandivert,implementdivertionplandivert,divert,doactivity
   firstcompleteprocedure: firstcompleteprocedure
   pimplementdivertionplancalm: pimplementdivertionplancalm,implementdivertionplancalm,calm,doactivity
+  pimplementdivertionplancalml: pimplementdivertionplancalml,pimplementdivertionplancalm,implementdivertionplancalm,calm,doactivity
   ivstartprocedure: ivstartprocedure,startprocedure
   ppamtestanxiety: ppamtestanxiety,amtestanxiety,anxietytest
   ppeamcalm: ppeamcalm,eamcalm,amcalm,calm,doactivity
+  ppeamcalml: ppeamcalml,ppeamcalm,eamcalm,amcalm,calm,doactivity
   ivprocedurecomplications: ivprocedurecomplications,procedurecomplications,idle
   pmakedivertionplan: pmakedivertionplan,makedivertionplan,qtypepreference
   ivdebrief: ivdebrief,debrief,doactivity

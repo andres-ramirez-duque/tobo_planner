@@ -419,6 +419,9 @@ class service_provider(object):
     pass
   def is_shutdown(self):
     pass
+  def init_bool_value(self, ppath, label, options):
+    pass
+
 
 class dummy_ros_proxy(service_provider):
   def __init__(self, plan, param_fn, yaml_fn):
@@ -453,6 +456,9 @@ class dummy_ros_proxy(service_provider):
       frame_dict=yaml.safe_load(stream)
     set_dict_param_value(frame_dict, path, v)
     write_out_yaml(frame_dict, self.yaml_fn)
+  def init_bool_value(self, ppath, label, options):
+    v = dsm.request_feature_value(label, options) == options[1]
+    self.set_parameter(ppath, v)
 
 class ros_proxy(service_provider):
   def __init__(self):
@@ -489,6 +495,8 @@ class ros_proxy(service_provider):
       print("Service call failed: %s"%e)
   def is_shutdown(self):
     return rospy.is_shutdown()
+
+
 
 ######################################################################################################
 ### stats ############################################################################################
@@ -586,6 +594,16 @@ class int_manager(object):
       params = frame_dict["sensors"]
       if params and "boolean_vars" in params:
         self._bool_sensors = params["boolean_vars"]
+
+  def init_bool_value(self, psym, label, options):
+    if psym in self._bool_parameters:
+      path_to_stage_param="/parameters/boolean_vars/" + psym
+      self.service_provider.init_bool_value(path_to_stage_param, label, options)
+
+  def lookup_startup_parameters(self):
+    self.init_bool_value("age", "User age?", ["younger","older"])
+    self.init_bool_value("iv", "Explain IV?", ["skip","explain"])
+
 
   ######################################################################################################
   ### action early implementation ######################################################################
@@ -1078,6 +1096,7 @@ class int_manager(object):
 
   def init(self):
     start_time = get_time()
+    self.lookup_startup_parameters()
     self.set_status_if_in_one_of(manager_status_enum.idle, (manager_status_enum.before,))
     self._start_action_chain_when_appropriate()
     if LOG:

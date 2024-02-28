@@ -32,6 +32,8 @@ goal""".split()
   
   if len(sys.argv) > 1 and sys.argv[1] == "12":
     pfn, yfn = "params/params0.12.txt", "model0.12/state_frames_scenario.yaml"
+  elif len(sys.argv) > 1 and sys.argv[1] == "13":
+    pfn, yfn = "params/params0.13.txt", "model0.13/state_frames_scenario.yaml"
   else:
     pfn, yfn = "params/params0.9.txt", "model0.9/state_frames_scenario.yaml"
   im = IM.int_manager(IM.dummy_ros_proxy(plan, pfn, yfn), yfn)
