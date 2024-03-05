@@ -805,6 +805,7 @@ class int_manager(object):
       timeout_label = "doactivity"
       if "forcedactivity" in self._action_hierarchy[op]:
         self.if_bool_parameter_then_set("forceaction", False)
+        self.if_bool_parameter_then_set("uselected " + params[0], False)
     elif "idle" in self._action_hierarchy[op]:
       timeout_label = "idle"
     elif "ivquerysitecheck" in self._action_hierarchy[op]:

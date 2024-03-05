@@ -215,6 +215,7 @@ action_hierarchy:
     amreengage:                   amreengage,pointofengagement
     forceddivertor:               ppdivertor,divertor,divert,doactivity,forcedactivity
     forcedcalmer:                 ppcalmer,calm,doactivity,forcedactivity
+    forcedbowout:                 doactivity,forcedactivity
     undodoneactivity:             undodoneactivity
 
 timeouts:                        

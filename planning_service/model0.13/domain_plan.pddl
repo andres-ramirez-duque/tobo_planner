@@ -298,6 +298,7 @@
     (completedprocedure )
     (debriefcomplete )
     (finishcomplete )
+    (not (uselected ?a))
     (amanxietymanagementcomplete )
     (not (amperforminganxietymanagement))
     (doneactivity ?a)
@@ -514,7 +515,8 @@
     (not (amperforminganxietymanagement))
     (engaged)
     (not (forceaction))
-    (not (iv)))
+    (not (iv))
+    (hasmadedivertionplan))
     :effect
    (and
     (not (tomanageanxiety))
@@ -546,6 +548,7 @@
     :precondition (and
     (not (previousdivert))
     (not (amperforminganxietymanagement))
+    (amanxietymanagementcomplete)
     (duringpreprocedure)
     (not (doneactivity ?a))
     (diverting ?a)
