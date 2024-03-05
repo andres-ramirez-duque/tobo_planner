@@ -7,6 +7,7 @@ from datetime import datetime
 import enum
 import getanaction
 import dummy_state_manager as dsm
+import plan_suffix_script_maker as suffix_maker
 
 LOG=True
 SENSE_THEN_VALIDATE=True
@@ -302,23 +303,27 @@ class PlannerProxy():
     apply(self.s, (message_out,))
 
 class DummyPlanner(Timer):
-  def __init__(self, t, s, steps):
-    super(DummyPlanner, self).__init__(t)
+  def __init__(self, prefix_plan, s):
+    super(DummyPlanner, self).__init__(1)
     self.s=s
-    self.steps = steps
+    self.steps = suffix_maker.sequence_continuer_generator(prefix_plan)
+    self.index = 0
   
   def get_action(self, plan_step):
-    action_bits = self.steps[plan_step].split("_")
+    action_bits = self.steps[self.index]
+    self.index += 1
     op = action_bits[0]
-    params = action_bits[1:]
+    params = action_bits[1]
     message_out = dummy_planner_chain_message(op, params, plan_step)
     super(DummyPlanner, self).start((message_out,))
     
   def _trigger(self, args):
     apply(self.s, (args,)) 
 
+
 class Planner(object):
   def __init__(self, s):
+    self.s = s
     self.action_sub = rospy.Subscriber("/next_action", action_chain, s)
     
   def get_action(self, plan_step):
@@ -430,16 +435,13 @@ class service_provider(object):
 class dummy_ros_proxy(service_provider):
   def __init__(self, plan, param_fn, yaml_fn):
     super(dummy_ros_proxy, self).__init__()
-    self.plan=plan
     self.param_d = dict(map(lambda x: x.split(":"), filter(lambda x: ":" in x, map(lambda x: x.strip(), open(param_fn)))))
     self.yaml_fn = yaml_fn
     self._init_d = {}
     
   def init_planner(self, action_broadcast_f):
-    #self.planner = DummyPlanner(2, action_broadcast_f, self.plan)
     self.planner = PlannerProxy(self.param_d, action_broadcast_f)
   def init_webserver(self, webserver_broadcast_f):
-    #self.web_server = DummyWebServer(10, webserver_broadcast_f)
     self.web_server = SimulatedWebServer(webserver_broadcast_f)
   def init_sensors(self, sensors_broadcast_f):
     self.sensor_server = DummySensors(1, sensors_broadcast_f)
@@ -753,6 +755,11 @@ class int_manager(object):
     self.add_flag(label, None)
     self._open_timers[label]=get_time()
 
+  def handle_failed_planner_call(self):
+    add_report("ERROR: Planning failed - continuing using script ", LogLevel.flow)
+    s = self.service_provider.planner.s
+    self.service_provider.planner = DummyPlanner(self._action_sequence, s)
+
   def process_action_execution(self, op, params):
     self._action_sequence.append((op,params))
     self._current_action = reconstruct_action_str(op, params)
@@ -764,6 +771,8 @@ class int_manager(object):
     if not op in self._action_hierarchy:
       print "WARNING: unknown action: ", op, params
       print "NOT IN HIERARCHY..."
+      if op == "None":
+        self.handle_failed_planner_call()
       timeout_label = "unknown_action"
     elif "doactivity" in self._action_hierarchy[op]:
       self.process_do_activity_action(op, params)
@@ -1089,6 +1098,7 @@ class int_manager(object):
   
   def register_disengagement(self):
     print ("FORCING FORCE ACTION Etc.")
+    add_report("Disengagement recorded - changing planning state..", LogLevel.flow)
     self.if_bool_parameter_then_set("requiresdisengage", True)
     self.if_bool_parameter_then_set("forceaction", True)
   
@@ -1098,6 +1108,8 @@ class int_manager(object):
         self.stop_message_event(req)
       elif req.char == 'd':
         self.register_disengagement()
+      elif req.char == 'p':
+        self.handle_failed_planner_call()
         #keyboard = Controller()
         #keyboard.press(Key.enter)
         #keyboard.release(Key.enter)
