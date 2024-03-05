@@ -284,7 +284,7 @@ class WebServer(object):
 
 class PlannerProxy():
   def __init__(self, params, s):
-    self.params_fn = params
+    self.param_d = params
     self.s = s
   
   def get_action(self, plan_step):
@@ -293,7 +293,7 @@ class PlannerProxy():
     
   def request_action(self, plan_step):
     print "NEW PLANNER THREAD.."
-    parameter_service=getanaction.dummy_parameter_service(self.params_fn)
+    parameter_service=getanaction.dummy_parameter_service(self.param_d)
     plan_output = getanaction.get_an_action(parameter_service, "YAML")
     action_bits = plan_output.split("_")
     op = action_bits[0]
@@ -421,18 +421,23 @@ class service_provider(object):
     pass
   def init_bool_value(self, ppath, label, options):
     pass
-
+  def init_param_value(self, ppath, label, options):
+    pass
+  def set_planning_model(self):
+    pass
+    
 
 class dummy_ros_proxy(service_provider):
   def __init__(self, plan, param_fn, yaml_fn):
     super(dummy_ros_proxy, self).__init__()
     self.plan=plan
-    self.param_fn = param_fn
+    self.param_d = dict(map(lambda x: x.split(":"), filter(lambda x: ":" in x, map(lambda x: x.strip(), open(param_fn)))))
     self.yaml_fn = yaml_fn
+    self._init_d = {}
     
   def init_planner(self, action_broadcast_f):
     #self.planner = DummyPlanner(2, action_broadcast_f, self.plan)
-    self.planner = PlannerProxy(self.param_fn, action_broadcast_f)
+    self.planner = PlannerProxy(self.param_d, action_broadcast_f)
   def init_webserver(self, webserver_broadcast_f):
     #self.web_server = DummyWebServer(10, webserver_broadcast_f)
     self.web_server = SimulatedWebServer(webserver_broadcast_f)
@@ -457,8 +462,19 @@ class dummy_ros_proxy(service_provider):
     set_dict_param_value(frame_dict, path, v)
     write_out_yaml(frame_dict, self.yaml_fn)
   def init_bool_value(self, ppath, label, options):
-    v = dsm.request_feature_value(label, options) == options[1]
+    v = dsm.request_feature_value(label, options)
     self.set_parameter(ppath, v)
+    self._init_d[ppath]=v
+  def init_param_value(self, ppath, label, options):
+    v = dsm.request_feature_value(label, options)
+    self.set_parameter(ppath + " " + str(v), True)
+  def set_planning_model(self):
+    pred = "/parameters/boolean_vars/age"
+    if pred in self._init_d and self._init_d[pred] :
+      self.param_d["background_knowledge_fn"] = self.param_d["background_knowledge_old_fn"]
+    else:
+      self.param_d["background_knowledge_fn"] = self.param_d["background_knowledge_young_fn"]
+
 
 class ros_proxy(service_provider):
   def __init__(self):
@@ -495,7 +511,11 @@ class ros_proxy(service_provider):
       print("Service call failed: %s"%e)
   def is_shutdown(self):
     return rospy.is_shutdown()
-
+  def set_planning_model(self):
+    if rospy.get_param("/parameters/boolean_vars/age",True) :
+      self.param_d["background_knowledge_fn"] = self.param_d["background_knowledge_old_fn"]
+    else:
+      self.param_d["background_knowledge_fn"] = self.param_d["background_knowledge_young_fn"]
 
 
 ######################################################################################################
@@ -515,7 +535,9 @@ def get_output_stats(proc_duration, action_sequence, action_hierarchy, timing_ba
   l.append( "Total number of actions: " + str(len(action_sequence)))
   robot = sensing = proc_sensing = delayers = enders = others = 0
   for (op,params) in action_sequence:
-    h = action_hierarchy[op]
+    h = []
+    if op in action_hierarchy:
+      h = action_hierarchy[op]
     labelled = False
     if "doactivity" in h:
       labelled=True
@@ -599,10 +621,18 @@ class int_manager(object):
     if psym in self._bool_parameters:
       path_to_stage_param="/parameters/boolean_vars/" + psym
       self.service_provider.init_bool_value(path_to_stage_param, label, options)
+  def init_param_value(self, psym, label, options):
+    if psym + " " + options[0] in self._bool_parameters:
+      path_to_stage_param="/parameters/boolean_vars/" + psym
+      self.service_provider.init_param_value(path_to_stage_param, label, options)
 
   def lookup_startup_parameters(self):
-    self.init_bool_value("age", "User age?", ["younger","older"])
-    self.init_bool_value("iv", "Explain IV?", ["skip","explain"])
+    self.init_bool_value("age", "Is user older", [False,True])
+    self.service_provider.set_planning_model()
+    self.init_bool_value("iv", "Explain IV?", [False,True])
+    self.init_param_value("maxdselected", "Max diverting?", ["bruno", "look", "bam", "shakeit", "macarena", "armdance", "happy"])
+    self.init_param_value("reward", "Reward?", ["bruno", "look", "bam", "shakeit", "macarena", "armdance", "happy"])
+    
 
 
   ######################################################################################################
@@ -613,6 +643,7 @@ class int_manager(object):
     self.service_provider.request_change((stage,), key_maker("web server", "stage progression", self.counter))
 
   def process_stage_changes(self, op, params):
+    if not op in self._action_hierarchy: return
     if "introduction" in self._action_hierarchy[op]:
       self.tell_webserver_progress_proc_step("introduction")
     elif "startpreprocedure" in self._action_hierarchy[op]:
@@ -730,7 +761,11 @@ class int_manager(object):
     
     self.process_stage_changes(op, params)
     
-    if "doactivity" in self._action_hierarchy[op]:
+    if not op in self._action_hierarchy:
+      print "WARNING: unknown action: ", op, params
+      print "NOT IN HIERARCHY..."
+      timeout_label = "unknown_action"
+    elif "doactivity" in self._action_hierarchy[op]:
       self.process_do_activity_action(op, params)
       timeout_label = "doactivity"
       if "forcedactivity" in self._action_hierarchy[op]:
@@ -774,8 +809,12 @@ class int_manager(object):
       timeout_label = "query_response"
       self.process_procedure_complete_query(op, params, self._op_timeout[timeout_label])
     elif "completesitecheck" in self._action_hierarchy[op]:
-      timeout_label = "query_response"
-      self.process_sitecheck_complete_query(op, params, self._op_timeout[timeout_label])
+      if "completesitecheck2" in self._action_hierarchy[op]:
+        self.if_bool_parameter_then_set("completedsitecheck", True)
+        timeout_label = "unknown_action"
+      else:
+        timeout_label = "query_response"
+        self.process_sitecheck_complete_query(op, params, self._op_timeout[timeout_label])
     elif "disengagement" in self._action_hierarchy[op]:
         self.if_bool_parameter_then_set("forceaction", False)
         self.if_bool_parameter_then_set("requiresdisengage", False)
@@ -1050,8 +1089,8 @@ class int_manager(object):
   
   def register_disengagement(self):
     print ("FORCING FORCE ACTION Etc.")
-    self.if_bool_parameter_then_set("forceaction", True)
     self.if_bool_parameter_then_set("requiresdisengage", True)
+    self.if_bool_parameter_then_set("forceaction", True)
   
   def key_press_handler(self, req):
     try:

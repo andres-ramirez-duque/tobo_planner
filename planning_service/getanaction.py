@@ -24,8 +24,8 @@ class ros_parameter_service(parameter_service):
   def get_param_value(self, param, default):
     return self.rospy.get_param(param, default)
 class dummy_parameter_service(parameter_service):
-  def __init__(self, fn):
-    self.d = dict(map(lambda x: x.split(":"), filter(lambda x: ":" in x, map(lambda x: x.strip(), open(fn)))))
+  def __init__(self, d):
+    self.d=d
   def get_param_value(self, param, default):
     if param in self.d:
       return self.d[param]
@@ -92,7 +92,8 @@ def get_an_action(parameter_service, source_mode="DUMMY"):
 ############################################################################################################
 
 if __name__ == '__main__':
-  parameter_service=dummy_parameter_service(os.sys.argv[1])
+  d = dict(map(lambda x: x.split(":"), filter(lambda x: ":" in x, map(lambda x: x.strip(), open(os.sys.argv[1])))))
+  parameter_service=dummy_parameter_service(d)
   get_an_action(parameter_service)
   
   
