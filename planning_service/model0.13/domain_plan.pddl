@@ -280,6 +280,30 @@
     (increase (total-cost) 1)
     )
   )
+  (:action forcedbowout
+    :parameters (?a - activity)
+    :precondition (and
+    ;(duringpreprocedure)
+    (not (doneactivity ?a))
+    (withdrawl ?a)
+    ;(engaged)
+    (uselected ?a)
+    (forceaction)
+    )
+    :effect
+   (and
+    (not (duringpreprocedure ))
+    (completedpreprocedure )
+    (completedsitecheck )
+    (completedprocedure )
+    (debriefcomplete )
+    (finishcomplete )
+    (amanxietymanagementcomplete )
+    (not (amperforminganxietymanagement))
+    (doneactivity ?a)
+    (increase (total-cost) 1000)
+    )
+  )
   (:action amreengage
     :precondition (and
     (not (engaged))
@@ -1060,6 +1084,7 @@
     (duringpreprocedure)
     (canmakedivertionplan)
     (not (hasmadedivertionplan))
+    (not (amperforminganxietymanagement))
     (engaged)
     (not (forceaction)))
     :effect
@@ -1075,6 +1100,7 @@
     (duringprocedure)
     (canmakedivertionplan)
     (not (hasmadedivertionplan))
+    (not (amperforminganxietymanagement))
     (engaged)
     (not (forceaction)))
     :effect

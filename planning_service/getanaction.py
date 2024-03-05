@@ -69,20 +69,23 @@ def cleanup(prp_root):
 #  import state_builder, make_prp_runner, planner
 
 def get_an_action(parameter_service, source_mode="DUMMY"):
-  is_costed = str(parameter_service.get_param_value('costed_domain', 'false')).lower()=="true"
-  domain_fn = parameter_service.get_param_value('domain_fn', 'model0.2/domain_plan.pddl')
-  #costed_domain_fn = parameter_service.get_param_value('costed_domain_fn', None)
-  background_knowledge_fn = parameter_service.get_param_value('background_knowledge_fn', 'model0.2/scenario_background_knowledge.pddl')
-  state_frame_fn = parameter_service.get_param_value('state_frame_fn', 'model0.2/state_frames_scenario.txt')
-  scenario_fn = parameter_service.get_param_value('scenario_fn', 'pout.pddl')
-  solution_fn= parameter_service.get_param_value('solution_fn', 'aplan.out')
-  prp_root = parameter_service.get_param_value('PRP_ROOT', '/home/al/ukcan/planner-for-relevant-policies')
-  # link_with_PRP(prp_root)
-  cmplan_abs_path = parameter_service.get_param_value('CMPLAN_ABS_PATH','./cmplan')
+  next_action = "None"
+  try:
+    is_costed = str(parameter_service.get_param_value('costed_domain', 'false')).lower()=="true"
+    domain_fn = parameter_service.get_param_value('domain_fn', 'model0.2/domain_plan.pddl')
+    #costed_domain_fn = parameter_service.get_param_value('costed_domain_fn', None)
+    background_knowledge_fn = parameter_service.get_param_value('background_knowledge_fn', 'model0.2/scenario_background_knowledge.pddl')
+    state_frame_fn = parameter_service.get_param_value('state_frame_fn', 'model0.2/state_frames_scenario.txt')
+    scenario_fn = parameter_service.get_param_value('scenario_fn', 'pout.pddl')
+    solution_fn= parameter_service.get_param_value('solution_fn', 'aplan.out')
+    prp_root = parameter_service.get_param_value('PRP_ROOT', '/home/al/ukcan/planner-for-relevant-policies')
+    # link_with_PRP(prp_root)
+    cmplan_abs_path = parameter_service.get_param_value('CMPLAN_ABS_PATH','./cmplan')
     
-  build_scenario(domain_fn, background_knowledge_fn, state_frame_fn, scenario_fn, source_mode, is_costed)
-  next_action = str(get_next_action(domain_fn, scenario_fn, solution_fn, prp_root, cmplan_abs_path, is_costed))
-  print ("THE ACTION: " + next_action)
+    build_scenario(domain_fn, background_knowledge_fn, state_frame_fn, scenario_fn, source_mode, is_costed)
+    next_action = str(get_next_action(domain_fn, scenario_fn, solution_fn, prp_root, cmplan_abs_path, is_costed))
+    print ("THE ACTION: " + next_action)
+  except: pass
   cleanup(prp_root)
   return next_action
 

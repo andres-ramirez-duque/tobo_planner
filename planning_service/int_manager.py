@@ -303,19 +303,24 @@ class PlannerProxy():
     apply(self.s, (message_out,))
 
 class DummyPlanner(Timer):
-  def __init__(self, prefix_plan, s):
+  def __init__(self, prefix_plan, service_provider, s, is_ROS):
     super(DummyPlanner, self).__init__(1)
     self.s=s
+    self.service_provider = service_provider
     self.steps = suffix_maker.sequence_continuer_generator(prefix_plan)
     self.index = 0
+    self.is_ROS = is_ROS # needs changed!
   
   def get_action(self, plan_step):
     action_bits = self.steps[self.index]
     self.index += 1
     op = action_bits[0]
     params = action_bits[1]
-    message_out = dummy_planner_chain_message(op, params, plan_step)
-    super(DummyPlanner, self).start((message_out,))
+    if self.is_ROS:
+      self.service_provider.broadcast_action(plan_step, op, params)
+    else:
+      message_out = dummy_planner_chain_message(op, params, plan_step)
+      super(DummyPlanner, self).start((message_out,))
     
   def _trigger(self, args):
     apply(self.s, (args,)) 
@@ -518,7 +523,23 @@ class ros_proxy(service_provider):
       self.param_d["background_knowledge_fn"] = self.param_d["background_knowledge_old_fn"]
     else:
       self.param_d["background_knowledge_fn"] = self.param_d["background_knowledge_young_fn"]
-
+  
+  def broadcast_action(self, plan_step, op, params):
+    from tobo_planner.msg import action_chain
+    from diagnostic_msgs.msg import DiagnosticStatus
+    pub = rospy.Publisher('next_action', action_chain, queue_size=1)
+    ac_msg = action_chain()
+    ac_msg.caller_id = 0
+    ac_msg.plan_step = plan_step
+    ac_msg.action_type = op
+    ac_msg.parameters = params
+    
+    temp_status = DiagnosticStatus()
+    temp_status.name = "Action Execution Status"
+    temp_status.hardware_id = "raspberry_pi4b"
+    temp_status.level = temp_status.OK
+    ac_msg.execution_status = temp_status
+    pub.publish(ac_msg)
 
 ######################################################################################################
 ### stats ############################################################################################
@@ -535,7 +556,7 @@ def get_time():
 def get_output_stats(proc_duration, action_sequence, action_hierarchy, timing_bank):
   l = ["Procedure duration: " + str(round(proc_duration, 2))]
   l.append( "Total number of actions: " + str(len(action_sequence)))
-  robot = sensing = proc_sensing = delayers = enders = others = 0
+  robot = sensing = proc_sensing = delayers = enders = poe = others = 0
   for (op,params) in action_sequence:
     h = []
     if op in action_hierarchy:
@@ -544,12 +565,15 @@ def get_output_stats(proc_duration, action_sequence, action_hierarchy, timing_ba
     if "doactivity" in h:
       labelled=True
       robot+=1
-    if "anxietytest" in h or "qtypepreference" in h or "engagementtest" in h:
+    if "anxietytest" in h or "qtypepreference" in h or "engagementtest" in h or "qactivitypreference" in h:
       labelled=True
       sensing +=1
     if "firstcompleteprocedure" in h or "secondcompleteprocedure" in h or "querysitecheck" in h or "waitforproceduretoend" in h:
       labelled=True
       proc_sensing +=1
+    if "pointofengagement" in h:
+      labelled=True
+      poe += 1
     if "wait" in h or "pause" in h:
       labelled=True
       delayers += 1
@@ -563,6 +587,7 @@ def get_output_stats(proc_duration, action_sequence, action_hierarchy, timing_ba
   l.append( "-- Number of sensing actions: " + str(sensing))
   l.append( "-- Number of procedure step query: " + str(proc_sensing))
   l.append( "-- Number of delaying actions: " + str(delayers))
+  l.append( "-- Number of point of engagement actions: " + str(poe))
   l.append( "-- Number of other actions: " + str(others))
   l.append( "-- Number of ender actions: " + str(enders))
   l.append("")
@@ -602,6 +627,7 @@ class int_manager(object):
     
     self.counter=-1
     self.parse_state_frame(sffn)
+    self.requires_noting_disengagement=False
     
   def parse_state_frame(self, sffn):
     with open(sffn, "r") as stream:
@@ -758,7 +784,7 @@ class int_manager(object):
   def handle_failed_planner_call(self):
     add_report("ERROR: Planning failed - continuing using script ", LogLevel.flow)
     s = self.service_provider.planner.s
-    self.service_provider.planner = DummyPlanner(self._action_sequence, s)
+    self.service_provider.planner = DummyPlanner(self._action_sequence, self.service_provider, s, self.service_provider.__class__ == ros_proxy)
 
   def process_action_execution(self, op, params):
     self._action_sequence.append((op,params))
@@ -867,6 +893,7 @@ class int_manager(object):
       if "ivfailedtoimpact" in self._action_hierarchy[op] or \
         "ivlostengagement" in self._action_hierarchy[op] :
         self.if_bool_parameter_then_set("completedsitecheck", True)
+          
     elif flag == "idle":
       pass
     elif flag == "wait":
@@ -906,7 +933,8 @@ class int_manager(object):
     else:
       print "TODO: do something about ", flag, message
   
-  
+    if self.requires_noting_disengagement:
+      self.enact_disengagement()
 
   ######################################################################################################
   ### locking util methods #############################################################################
@@ -1097,10 +1125,18 @@ class int_manager(object):
       add_report("Ignoring nau reply (request already satisfied): action " + str(action_str) + ", index: " + str(indx))
   
   def register_disengagement(self):
+    print ("NOTING DISENGAGEMENT")
+    add_report("Disengagement noted - waiting for loop to enact..", LogLevel.flow)
+    self.requires_noting_disengagement=True
+    #self.if_bool_parameter_then_set("requiresdisengage", True)
+    #self.if_bool_parameter_then_set("forceaction", True)
+  
+  def enact_disengagement(self):
     print ("FORCING FORCE ACTION Etc.")
-    add_report("Disengagement recorded - changing planning state..", LogLevel.flow)
+    add_report("Disengagement acted on - changing planning state..", LogLevel.flow)
+    self.requires_noting_disengagement=False
     self.if_bool_parameter_then_set("requiresdisengage", True)
-    self.if_bool_parameter_then_set("forceaction", True)
+    self.if_bool_parameter_then_set("forceaction", True)  
   
   def key_press_handler(self, req):
     try:
