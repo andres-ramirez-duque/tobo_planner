@@ -12,6 +12,7 @@
   <param name="solution_fn" value="$(find tobo_planner)/planning_service/aplan.out"/>
   
   <rosparam command="load" file="$(find tobo_planner)/planning_service/model0.13/state_frames_scenario.yaml"/>
+  <rosparam command="load" file="$(find tobo_planner)/planning_service/model0.13/parameters_frames_scenario.yaml"/>
 
   <node pkg="tobo_planner" type="getanaction_service.py" name="get_an_action_service" output="screen">
   </node>

@@ -519,10 +519,10 @@ class ros_proxy(service_provider):
   def is_shutdown(self):
     return rospy.is_shutdown()
   def set_planning_model(self):
-    if rospy.get_param("/parameters/boolean_vars/age",True) :
-      self.param_d["background_knowledge_fn"] = self.param_d["background_knowledge_old_fn"]
+    if str(rospy.get_param("/parameters/boolean_vars/age",True)).lower() == 'true':
+      self.set_parameter("/background_knowledge_fn", rospy.get_param("/background_knowledge_old_fn"))
     else:
-      self.param_d["background_knowledge_fn"] = self.param_d["background_knowledge_young_fn"]
+      self.set_parameter("/background_knowledge_fn", rospy.get_param("/background_knowledge_young_fn"))
   
   def broadcast_action(self, plan_step, op, params):
     from tobo_planner.msg import action_chain
