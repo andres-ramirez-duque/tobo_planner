@@ -205,6 +205,8 @@ action_hierarchy:
     firstcompleteprocedure:       firstcompleteprocedure
     pimplementdivertionplancalm:  pimplementdivertionplancalm,implementdivertionplancalm,calm,doactivity
     pimplementdivertionplancalml: pimplementdivertionplancalml,pimplementdivertionplancalm,implementdivertionplancalm,calm,doactivity
+    pbadlyimplementedcalmplan:    pbadlyimplementedcalmplan,pimplementdivertionplancalm,implementdivertionplancalm,calm,doactivity
+    pbadlyimplementeddivertplan:  pbadlyimplementeddivertplan,pimplementdivertionplancalm,implementdivertionplancalm,calm,doactivity
     ivstartprocedure:             ivstartprocedure,startprocedure
     ppamtestanxiety:              ppamtestanxiety,amtestanxiety,anxietytest
     ppeamcalm:                    ppeamcalm,eamcalm,amcalm,calm,doactivity
@@ -224,10 +226,18 @@ action_hierarchy:
     ppreengage:                   ppreengage,pointofengagement,qactivitypreference
     ppreengagel:                  ppreengagel,ppreengage,pointofengagement,qactivitypreference
     ppreengagenc:                 ppreengagenc
+    amdreengage:                  amdreengage,pointofengagement,qactivitypreference
+    amcreengage:                  amcreengage,pointofengagement,qactivitypreference
+    amdreengagenc:                amdreengagenc
+    amcreengagenc:                amcreengagenc
     screengage:                   screengage,reengage,pointofengagement,qactivitypreference
     amreengage:                   amreengage,pointofengagement
     forceddivertor:               ppdivertor,divertor,divert,doactivity,forcedactivity
+    forceddivertormax:            forceddivertormax,ppdivertor,divertor,divert,doactivity,forcedactivity
     forcedcalmer:                 ppcalmer,calm,doactivity,forcedactivity
+    amforceddivertor:             amforceddivertor,ppdivertor,divertor,divert,doactivity,forcedactivity
+    amforceddivertormax:          amforceddivertormax,amforceddivertor,ppdivertor,divertor,divert,doactivity,forcedactivity
+    amforcedcalmer:               forcedcalmer,ppcalmer,calm,doactivity,forcedactivity    
     forcedbowout:                 forcedbowout,doactivity,forcedactivity
     undodoneactivity:             undodoneactivity
 
