@@ -33,6 +33,10 @@ parameters:
         uselected taichi:                    false
         uselected story:                     false
         uselected twinklestars:              false
+        uselected asitwas:              false
+        uselected idontcare:              false
+        uselected whatdoyoumean:              false
+        uselected blindinglights:              false
         maxdselected bruno:                     false
         maxdselected look:                     false
         maxdselected bam:                     false
@@ -47,6 +51,10 @@ parameters:
         maxdselected happyandyouknow:                     false
         maxdselected saxophone:                     false
         maxdselected guitar:                     false
+        maxdselected asitwas:                     false
+        maxdselected idontcare:                     false
+        maxdselected whatdoyoumean:                     false
+        maxdselected blindinglights:                     false
         reward bruno:                     false
         reward look:                     false
         reward bam:                     false
@@ -67,13 +75,13 @@ parameters:
         reward twinklestars:                     false
         reward taichi:                     false
         reward story:                     false
+        reward asitwas:                     false
+        reward idontcare:                     false
+        reward whatdoyoumean:                     false
+        reward blindinglights:                     false
         
     last_executed_action:         ''
     previous_action:              ''
-
-#activity_name_mapping:
-#    song1: song,4,taylor swift blah
-#    song2: song,4
 
 sensors: None
 
@@ -152,6 +160,10 @@ planner:
         doneactivity chocolate:                     false
         doneactivity twinklestars:                     false
         doneactivity taichi:                     false
+        doneactivity asitwas:                     false
+        doneactivity idontcare:                     false
+        doneactivity whatdoyoumean:                     false
+        doneactivity blindinglights:                     false                                
         doneactivity story:                     false
         doneactivity bowout:                    false
         doneactivity strategyenforce:           false

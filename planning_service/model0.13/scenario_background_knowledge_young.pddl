@@ -2,7 +2,7 @@
   (:domain ivprocdomain)
   (:objects 
     intro bye ivdescription bowout strategyenforce - activity
-    bruno look bam shakeit macarena armdance happy calmdown babyshark oldmacdonald fivemonkeys happyandyouknow saxophone guitar - activity
+    bruno look bam shakeit macarena armdance happy calmdown babyshark oldmacdonald fivemonkeys happyandyouknow saxophone guitar asitwas idontcare whatdoyoumean blindinglights - activity
     belly cookies chocolate twinklestars taichi story - activity
   )
   (:init
@@ -20,6 +20,10 @@
     (diverting fivemonkeys)
     (diverting happyandyouknow)
     (diverting saxophone)
+    (diverting asitwas)
+    (diverting idontcare)
+    (diverting whatdoyoumean)
+    ;(diverting blindinglights)    
     
     (calming belly)
     (calming cookies)
@@ -39,7 +43,10 @@
     (cd3 fivemonkeys)
     (cd3 happyandyouknow)
     (cd5 saxophone)
-
+    (cd5 asitwas)
+    (cd4 idontcare)
+    (cd4 whatdoyoumean)
+    ;(cd4 blindinglights)
     
     (cd1 belly) ; younger
     (cd2 cookies) ; younger,older

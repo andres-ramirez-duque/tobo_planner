@@ -658,7 +658,7 @@ class int_manager(object):
     self.init_bool_value("age", "Is user older", [False,True])
     self.service_provider.set_planning_model()
     self.init_bool_value("iv", "Explain IV?", [False,True])
-    self.init_param_value("maxdselected", "Max diverting?", ["bruno", "look", "bam", "shakeit", "macarena", "armdance", "happy"])
+    self.init_param_value("maxdselected", "Max diverting?", ["whatdoyoumean","bruno", "look", "bam", "shakeit", "macarena", "armdance", "happy"])
     self.init_param_value("reward", "Reward?", ["bruno", "look", "bam", "shakeit", "macarena", "armdance", "happy"])
     
 
@@ -838,7 +838,7 @@ class int_manager(object):
     elif "qactivitypreference" in self._action_hierarchy[op]:
       timeout_label = "query_response"
       self.process_activity_preference_query(op, params, self._op_timeout[timeout_label])
-      if "ppreengage" in self._action_hierarchy[op]:
+      if "ppreengage" in self._action_hierarchy[op] or "screengage" in self._action_hierarchy[op]:
         self.if_bool_parameter_then_set("forceaction", True)
     elif "qtypepreference" in self._action_hierarchy[op]:
       timeout_label = "query_response"
@@ -1099,7 +1099,7 @@ class int_manager(object):
         print "++++ Planner response: ("+str(op)+ " " + " ".join(map(lambda x: str(x), params)) +")"
     self.process_action_execution(op, params)
 
-def webserver_message_event(self, web_message):
+  def webserver_message_event(self, web_message):
     t = web_message.request_type
     if len (web_message.parameters) == 0:
       if str(t) == "register disengagement" :
