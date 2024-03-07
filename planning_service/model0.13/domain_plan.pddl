@@ -93,8 +93,14 @@
    (and
     (isreadytostart)
     (haswaited)
-    (increase (total-cost) 1))
+    (increase (total-cost) 1)
+    )
   )
+  
+  ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+  ;; Point of engagement ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+  ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+  
   (:action ivintroduction
     :parameters (?a - activity)
     :precondition (and
@@ -111,7 +117,8 @@
     (introductioncomplete)
     (doneactivity ?a)
     (engaged)
-    (increase (total-cost) 1))
+    (increase (total-cost) 1)
+    )
   )
   (:action reengage
     :precondition (and
@@ -124,7 +131,8 @@
     :effect
    (and
     (engaged)
-    (increase (total-cost) 1))
+    (increase (total-cost) 1)
+    )
   )
   ;(:action ppreengage
   ;  :precondition (and
@@ -234,6 +242,7 @@
       (increase (total-cost) 1)
     )
   )
+
   (:action forceddivertor
     :parameters (?a - activity)
     :precondition (and
@@ -298,6 +307,7 @@
     (completedprocedure )
     (debriefcomplete )
     (finishcomplete )
+    (usedmaxdactivity)
     (not (uselected ?a))
     (amanxietymanagementcomplete )
     (not (amperforminganxietymanagement))
@@ -316,48 +326,33 @@
     :effect
    (and
     (engaged)
-    (increase (total-cost) 1))
+    (increase (total-cost) 1)
+    )
   )
-  (:action disengage
-    :precondition (and
-    (requiresdisengage)
-    (engaged)
-    (not (previousinform))
-    (not (amperforminganxietymanagement)))
-    :effect
-   (and
-    (not (engaged))
-    (not (requiresdisengage))
-    (not (forceaction))
-    (increase (total-cost) 1))
-  )
-  (:action disengageniv
-    :precondition (and
-    (requiresdisengage)
-    (engaged)
-    (previousinform)
-    (not (amperforminganxietymanagement)))
-    :effect
-   (and
-    (not (iv))
-    (not (engaged))
-    (not (requiresdisengage))
-    (not (forceaction))
-    (increase (total-cost) 1))
-  )
-  (:action amdisengage
-    :precondition (and
-    (requiresdisengage)
-    (engaged)
-    (amperforminganxietymanagement))
-    :effect
-   (and
-    (not (engaged))
-    (not (requiresdisengage))
-    (not (forceaction))
-    (increase (total-cost) 1))
-  )
-  (:action ivlostengagement
+  ;(:action ivlostengagement
+  ;  :parameters (?a - activity)
+  ;  :precondition (and
+  ;  (duringpreprocedure )
+  ;  (amperforminganxietymanagement)
+  ;  (doneanxietytest)
+  ;  (not (okanxiety))
+  ;  (not (engaged))
+  ;  (withdrawl ?a))
+  ;  :effect
+  ; (and
+  ;  (not (duringpreprocedure ))
+  ;  (completedpreprocedure )
+  ;  (completedsitecheck )
+  ;  (completedprocedure )
+  ;  (debriefcomplete )
+  ;  (finishcomplete )
+  ;  (amanxietymanagementcomplete )
+  ;  (not (amperforminganxietymanagement))
+  ;  (doneactivity ?a)
+  ;  (increase (total-cost) 1000)
+  ;  )
+  ;)
+  (:action querydisengagement
     :parameters (?a - activity)
     :precondition (and
     (duringpreprocedure )
@@ -368,17 +363,58 @@
     (withdrawl ?a))
     :effect
    (and
-    (not (duringpreprocedure ))
-    (completedpreprocedure )
-    (completedsitecheck )
-    (completedprocedure )
-    (debriefcomplete )
-    (finishcomplete )
-    (amanxietymanagementcomplete )
-    (not (amperforminganxietymanagement))
-    (doneactivity ?a)
-    (increase (total-cost) 1000))
+    (oneof 
+    (and
+      (uselected ?a)
+      (forceaction)
+    )
+    (and
+      (engaged)
+    )
+    )
+    (increase (total-cost) 1000)
+   )
+  )  
+  
+  ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+  ;; Disengagement ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+  ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+  
+  (:action disengage
+    :precondition (and
+    (requiresdisengage)
+    (engaged)
+    (not (previousinform))
+    )
+    :effect
+   (and
+    (not (engaged))
+    (not (requiresdisengage))
+    (not (forceaction))
+    (increase (total-cost) 1)
+    )
   )
+  (:action disengageniv
+    :precondition (and
+    (requiresdisengage)
+    (engaged)
+    (previousinform)
+    )
+    :effect
+   (and
+    (not (iv))
+    (not (engaged))
+    (not (requiresdisengage))
+    (not (forceaction))
+    (increase (total-cost) 1)
+    )
+  )
+  
+  
+  ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+  ;; ~Sustaining ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+  ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;  
+  
   
   (:action introductionpause
     :precondition (and
@@ -392,7 +428,8 @@
    (and
     (intropausecomplete)
     (haspaused)
-    (increase (total-cost) 1))
+    (increase (total-cost) 1)
+    )
   )
   (:action ivstartpreprocedure
     :precondition (and
@@ -409,7 +446,8 @@
     (canmakedivertionplan)
     (duringpreprocedure)
     (tomanageanxiety)
-    (increase (total-cost) 1))
+    (increase (total-cost) 1)
+    )
   )
   (:action pameducateonprocedure
     :parameters (?a - activity)
@@ -431,7 +469,8 @@
     (haseducated)
     (givenprocedureinfo)
     (doneactivity ?a)
-    (increase (total-cost) 1))
+    (increase (total-cost) 1)
+    )
   )
   (:action pameducateonprocedurey
     :parameters (?a - activity)
@@ -453,7 +492,8 @@
     (haseducated)
     (givenprocedureinfo)
     (doneactivity ?a)
-    (increase (total-cost) 1))
+    (increase (total-cost) 1)
+    )
   )
   (:action ivcompletepreprocedure
     :precondition (and
@@ -472,7 +512,8 @@
     (not (haseducated))
     (not (hasdiverted))
     (not (hascalmed))
-    (increase (total-cost) 1))
+    (increase (total-cost) 1)
+    )
   )
   (:action ivcompletepreprocedureniv
     :precondition (and
@@ -490,7 +531,8 @@
     (not (haseducated))
     (not (hasdiverted))
     (not (hascalmed))
-    (increase (total-cost) 1))
+    (increase (total-cost) 1)
+    )
   )
   (:action ppstartanxietymanagement
     :precondition (and
@@ -506,7 +548,8 @@
     (not (tomanageanxiety))
     (amrequiresanxietytest)
     (amperforminganxietymanagement)
-    (increase (total-cost) 1))
+    (increase (total-cost) 1)
+    )
   )
   (:action ppstartanxietymanagementniv
     :precondition (and
@@ -522,7 +565,8 @@
     (not (tomanageanxiety))
     (amrequiresanxietytest)
     (amperforminganxietymanagement)
-    (increase (total-cost) 1))
+    (increase (total-cost) 1)
+    )
   )
   (:action ppamtestanxiety
     :precondition (and
@@ -541,7 +585,8 @@
     (not (okanxiety))))
     (not (amrequiresanxietytest))
     (doneanxietytest)
-    (increase (total-cost) 1))
+    (increase (total-cost) 1)
+    )
   )
   (:action ppdivertor
     :parameters (?a - activity)
@@ -561,7 +606,8 @@
     (not (previousinform))
     (hasdiverted)
     (doneactivity ?a)
-    (increase (total-cost) 1))
+    (increase (total-cost) 1)
+    )
   )
   (:action ppdivertormax
     :parameters (?a - activity)
@@ -581,7 +627,8 @@
     (not (previousinform))
     (hasdiverted)
     (doneactivity ?a)
-    (increase (total-cost) 20))
+    (increase (total-cost) 20)
+    )
   )
   (:action ppcalmer
     :parameters (?a - activity)
@@ -600,7 +647,8 @@
     (not (previousinform))
     (hascalmed)
     (doneactivity ?a)
-    (increase (total-cost) 1))
+    (increase (total-cost) 1)
+    )
   )
   (:action ppeamdivert
     :parameters (?a - activity)
@@ -615,14 +663,15 @@
     (not (forceaction)))
     :effect
    (and
-    (not (previousdivert))
+    (previousdivert)
     (not (previouscalm))
     (not (previousinform))
     (not (amrequiresdivertion))
     (amrequirescalming)
     (hasdiverted)
     (doneactivity ?a)
-    (increase (total-cost) 1))
+    (increase (total-cost) 1)
+    )
   )
   (:action ppeamdivertmax
     :parameters (?a - activity)
@@ -637,14 +686,15 @@
     :effect
    (and
     (usedmaxdactivity)
-    (not (previousdivert))
+    (previousdivert)
     (not (previouscalm))
     (not (previousinform))
     (not (amrequiresdivertion))
     (amrequirescalming)
     (hasdiverted)
     (doneactivity ?a)
-    (increase (total-cost) 10))
+    (increase (total-cost) 10)
+    )
   )
   
   (:action ppeamdivertl
@@ -659,14 +709,15 @@
     (not (forceaction)))
     :effect
    (and
-    (not (previousdivert))
+    (previousdivert)
     (not (previouscalm))
     (not (previousinform))
     (not (amrequiresdivertion))
     (amrequirescalming)
     (hasdiverted)
     (doneactivity ?a)
-    (increase (total-cost) 10))
+    (increase (total-cost) 10)
+    )
   )
   (:action ppeamcalm
     :parameters (?a - activity)
@@ -681,12 +732,15 @@
     (cd1 ?a))
     :effect
    (and
+    (not (previousdivert))
+    (not (previousinform))
     (previouscalm)
     (not (amrequirescalming))
     (amrequiresanxietyretest)
     (hascalmed)
     (doneactivity ?a)
-    (increase (total-cost) 1))
+    (increase (total-cost) 1)
+    )
   )
   (:action ppeamcalml
     :parameters (?a - activity)
@@ -700,12 +754,15 @@
     (not (forceaction)))
     :effect
    (and
+    (not (previousdivert))
+    (not (previousinform))
     (previouscalm)
     (not (amrequirescalming))
     (amrequiresanxietyretest)
     (hascalmed)
     (doneactivity ?a)
-    (increase (total-cost) 10))
+    (increase (total-cost) 10)
+    )
   )
   
   (:action ppamretestanxiety
@@ -726,7 +783,8 @@
     (not (amrequiresanxietyretest))
     (not (amperforminganxietymanagement))
     (doneanxietytest)
-    (increase (total-cost) 1))
+    (increase (total-cost) 1)
+    )
   )
   (:action ivfailedtoimpact
     :parameters (?a - activity)
@@ -746,7 +804,8 @@
     (finishcomplete)
     (amanxietymanagementcomplete)
     (doneactivity ?a)
-    (increase (total-cost) 1000))
+    (increase (total-cost) 1000)
+    )
   )
   (:action ivprocedurecomplications
     :precondition (and
@@ -759,7 +818,8 @@
     (not (duringprocedure))
     (completedprocedure)
     (doneidle)
-    (increase (total-cost) 1000))
+    (increase (total-cost) 1000)
+    )
   )
   (:action ivquerysitecheck
     :precondition (and
@@ -779,7 +839,8 @@
     (requiressitecheck)) (and
     (completedsitecheck)))
     (haswaited)
-    (increase (total-cost) 1))
+    (increase (total-cost) 1)
+    )
   )
   (:action ivstartsitecheck
     :precondition (and
@@ -797,7 +858,8 @@
    (and
     (duringsitecheck)
     (not (requiressitecheck))
-    (increase (total-cost) 1))
+    (increase (total-cost) 1)
+    )
   )
   (:action completesitecheck
     :precondition (and
@@ -816,7 +878,8 @@
     (and (secondsitecheck))
     )
     (not (hascalmed))
-    (increase (total-cost) 1))
+    (increase (total-cost) 1)
+    )
   )
   (:action completesitecheck2
     :precondition (and
@@ -832,7 +895,8 @@
     (not (haseducated))
     (completedsitecheck)
     (not (hascalmed))
-    (increase (total-cost) 1))
+    (increase (total-cost) 1)
+    )
   )
   (:action relaxduringcheck
     :parameters (?a - activity)
@@ -846,7 +910,8 @@
    (and
     (hascalmed)
     (doneactivity ?a)
-    (increase (total-cost) 1))
+    (increase (total-cost) 1)
+    )
   )
   (:action sceducateonprocedure
     :parameters (?a - activity)
@@ -860,7 +925,8 @@
     (haseducated)
     (givenstrategyinfo)
     (doneactivity ?a)
-    (increase (total-cost) 1))
+    (increase (total-cost) 1)
+    )
   )
   (:action readyforprocedure
     :precondition (and
@@ -877,7 +943,8 @@
    (and
     (isreadyforprocedure)
     (haswaited)
-    (increase (total-cost) 1))
+    (increase (total-cost) 1)
+    )
   )
   (:action ivstartprocedure
     :precondition (and
@@ -891,7 +958,8 @@
    (and
     (duringprocedure)
     (firstperiod)
-    (increase (total-cost) 1))
+    (increase (total-cost) 1)
+    )
   )
   (:action firstcompleteprocedure
     :precondition (and
@@ -908,7 +976,8 @@
     (secondperiod)
     (not (hassatisfieddivertionplan))))
     (not (firstperiod))
-    (increase (total-cost) 1))
+    (increase (total-cost) 1)
+    )
   )
   (:action secondcompleteprocedure
     :precondition (and
@@ -926,7 +995,8 @@
     (procedurestillrunning)
     (thirdperiod)))
     (not (secondperiod))
-    (increase (total-cost) 1))
+    (increase (total-cost) 1)
+    )
   )
   (:action waitforproceduretoend
     :precondition (and
@@ -944,7 +1014,8 @@
     (waitedforproceduretoend)
     (haswaited)
     (not (thirdperiod))
-    (increase (total-cost) 1))
+    (increase (total-cost) 1)
+    )
   )
   (:action completeprocedure
     :precondition (and
@@ -957,7 +1028,8 @@
    (and
     (not (duringprocedure))
     (completedprocedure)
-    (increase (total-cost) 1))
+    (increase (total-cost) 1)
+    )
   )
   (:action pimplementdivertionplancalm
     :parameters (?a - activity)
@@ -975,7 +1047,8 @@
     (hassatisfieddivertionplan)
     (hascalmed)
     (doneactivity ?a)
-    (increase (total-cost) 1))
+    (increase (total-cost) 1)
+    )
   )
   (:action pimplementdivertionplancalml
     :parameters (?a - activity)
@@ -992,7 +1065,8 @@
     (hassatisfieddivertionplan)
     (hascalmed)
     (doneactivity ?a)
-    (increase (total-cost) 20))
+    (increase (total-cost) 20)
+    )
   )
   (:action pimplementdivertionplandivert
     :parameters (?a - activity)
@@ -1011,7 +1085,8 @@
     (hassatisfieddivertionplan)
     (hasdiverted)
     (doneactivity ?a)
-    (increase (total-cost) 1))
+    (increase (total-cost) 1)
+    )
   )
   (:action pimplementdivertionplandivert5
     :parameters (?a - activity)
@@ -1029,7 +1104,8 @@
     (hassatisfieddivertionplan)
     (hasdiverted)
     (doneactivity ?a)
-    (increase (total-cost) 10))
+    (increase (total-cost) 10)
+    )
   )
   (:action pimplementdivertionplandivertl
     :parameters (?a - activity)
@@ -1046,7 +1122,8 @@
     (hassatisfieddivertionplan)
     (hasdiverted)
     (doneactivity ?a)
-    (increase (total-cost) 20))
+    (increase (total-cost) 20)
+    )
   )
   (:action pbadlyimplementeddivertplan
     :parameters (?a - activity)
@@ -1063,7 +1140,8 @@
     (hassatisfieddivertionplan)
     (hascalmed)
     (doneactivity ?a)
-    (increase (total-cost) 100))
+    (increase (total-cost) 100)
+    )
   )
   (:action pbadlyimplementedcalmplan
     :parameters (?a - activity)
@@ -1080,7 +1158,8 @@
     (hassatisfieddivertionplan)
     (hasdiverted)
     (doneactivity ?a)
-    (increase (total-cost) 100))
+    (increase (total-cost) 100)
+    )
   )
   (:action ppmakedivertionplan
     :precondition (and
@@ -1096,7 +1175,8 @@
     (uselecteddivert)) (and
     (uselectedcalming)))
     (hasmadedivertionplan)
-    (increase (total-cost) 1))
+    (increase (total-cost) 1)
+    )
   )
   (:action pmakedivertionplan
     :precondition (and
@@ -1112,7 +1192,8 @@
     (uselecteddivert)) (and
     (uselectedcalming)))
     (hasmadedivertionplan)
-    (increase (total-cost) 1))
+    (increase (total-cost) 1)
+    )
   )
   (:action procedurepause
     :precondition (and
@@ -1125,7 +1206,8 @@
    (and
     (procedurepausecomplete)
     (haspaused)
-    (increase (total-cost) 1))
+    (increase (total-cost) 1)
+    )
   )
   (:action ivdebrief
     :parameters (?a - activity)
@@ -1140,7 +1222,8 @@
    (and
     (debriefcomplete)
     (doneactivity ?a)
-    (increase (total-cost) 1))
+    (increase (total-cost) 1)
+    )
   )
   (:action ivfinish
     :parameters (?a - activity)
@@ -1154,11 +1237,14 @@
    (and
     (finishcomplete)
     (doneactivity ?a)
-    (increase (total-cost) 1))
+    (increase (total-cost) 1)
+    )
   )
   (:action undodoneactivity
     :parameters (?a - activity)
     :precondition (doneactivity ?a)
-    :effect (and (not (doneactivity ?a)) (increase (total-cost) 10000)))
+    :effect (and (not (doneactivity ?a)) 
+    (increase (total-cost) 10000)
+    ))
 )
 ; 0.004382 0.000397 90.9402099498

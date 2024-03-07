@@ -12,6 +12,7 @@ parameters:
         requiresdisengage:        false
         age:               false
         iv:                false
+        uselected bowout:                    false
         uselected bruno:                     false
         uselected look:                     false
         uselected bam:                     false
@@ -206,8 +207,8 @@ action_hierarchy:
     completeprocedure:            completeprocedure
     disengage:                    disengage,disengagement
     disengageniv:                 disengageniv,disengage,disengagement
-    amdisengage:                  amdisengage,disengagement
     reengage:                     reengage,pointofengagement
+    querydisengagement:           querydisengagement
     ppreengage:                   ppreengage,pointofengagement,qactivitypreference
     ppreengagel:                  ppreengagel,ppreengage,pointofengagement,qactivitypreference
     ppreengagenc:                 ppreengagenc
@@ -215,7 +216,7 @@ action_hierarchy:
     amreengage:                   amreengage,pointofengagement
     forceddivertor:               ppdivertor,divertor,divert,doactivity,forcedactivity
     forcedcalmer:                 ppcalmer,calm,doactivity,forcedactivity
-    forcedbowout:                 doactivity,forcedactivity
+    forcedbowout:                 forcedbowout,doactivity,forcedactivity
     undodoneactivity:             undodoneactivity
 
 timeouts:                        

@@ -479,7 +479,7 @@ class dummy_ros_proxy(service_provider):
     pred = "/parameters/boolean_vars/age"
     if pred in self._init_d and self._init_d[pred] :
       self.param_d["background_knowledge_fn"] = self.param_d["background_knowledge_old_fn"]
-    else:
+    elif "background_knowledge_young_fn" in self.param_d:
       self.param_d["background_knowledge_fn"] = self.param_d["background_knowledge_young_fn"]
 
 
@@ -568,7 +568,7 @@ def get_output_stats(proc_duration, action_sequence, action_hierarchy, timing_ba
     if "anxietytest" in h or "qtypepreference" in h or "engagementtest" in h or "qactivitypreference" in h:
       labelled=True
       sensing +=1
-    if "firstcompleteprocedure" in h or "secondcompleteprocedure" in h or "querysitecheck" in h or "waitforproceduretoend" in h:
+    if "firstcompleteprocedure" in h or "secondcompleteprocedure" in h or "querysitecheck" in h or "waitforproceduretoend" in h or "querydisengagement" in h:
       labelled=True
       proc_sensing +=1
     if "pointofengagement" in h:
@@ -768,6 +768,14 @@ class int_manager(object):
     self.add_flag(label, default)
     self._open_timers[label]=get_time()
 
+  def process_disengagement_query(self, op, params): 
+    label = "disengagement stop query"
+    options = ("true","false")
+    default="false"
+    self.service_provider.ask_for_user_input(options, default, -1, key_maker("web server",label, self.counter))
+    self.add_flag(label, default)
+    self._open_timers[label]=get_time()
+
   def process_wait_procedure_end(self, op, params): 
     label = "procedure ended ok query"
     options = ("true","false")
@@ -806,11 +814,16 @@ class int_manager(object):
       if "forcedactivity" in self._action_hierarchy[op]:
         self.if_bool_parameter_then_set("forceaction", False)
         self.if_bool_parameter_then_set("uselected " + params[0], False)
+        if "forcedbowout" in self._action_hierarchy[op]:
+          self.if_bool_parameter_then_set("completedsitecheck", True)
     elif "idle" in self._action_hierarchy[op]:
       timeout_label = "idle"
     elif "ivquerysitecheck" in self._action_hierarchy[op]:
       timeout_label = "wait"
       self.process_site_check_query(op, params)
+    elif "querydisengagement" in self._action_hierarchy[op]:
+      timeout_label = "query_response"
+      self.process_disengagement_query(op, params)
     elif "waitforproceduretoend" in self._action_hierarchy[op]:
       timeout_label = "wait"
       self.process_wait_procedure_end(op, params)
@@ -927,6 +940,12 @@ class int_manager(object):
         self.if_bool_parameter_then_set("completedsitecheck", True)
     elif flag == "site check complete query":
       self.if_bool_parameter_then_set("completedsitecheck", message)
+    elif flag == "disengagement stop query":
+      if str(message).lower() == "true":
+        self.if_bool_parameter_then_set("uselected bowout", True)
+        self.if_bool_parameter_then_set("forceaction", True)
+      else:
+        self.if_bool_parameter_then_set("engaged", True)
     elif flag == "procedure ended ok query":
       self.if_bool_parameter_then_set("procedurehasfinished", message)
     elif flag == "procedure complete query":
