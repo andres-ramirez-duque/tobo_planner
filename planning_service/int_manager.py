@@ -1099,16 +1099,16 @@ class int_manager(object):
         print "++++ Planner response: ("+str(op)+ " " + " ".join(map(lambda x: str(x), params)) +")"
     self.process_action_execution(op, params)
 
-  def webserver_message_event(self, web_message):
-    message = str(web_message.parameters[0])
+def webserver_message_event(self, web_message):
     t = web_message.request_type
+    if len (web_message.parameters) == 0:
+      if str(t) == "register disengagement" :
+        self.register_disengagement()
+        return
+    message = str(web_message.parameters[0])
     indx = web_message.plan_step
     add_report("Received message from webserver, index: " + str(indx), LogLevel.flow)
     add_report("Type: " + str(t)+", message " + str(message) + ", index: " + str(indx))
-    
-    if str(t) == "register disengagement" :
-      self.register_disengagement()
-      return
     
     if self.remove_request_if_active(t, indx):
       if LOG:
