@@ -542,7 +542,8 @@
     (not (amperforminganxietymanagement))
     (engaged)
     (not (forceaction))
-    (iv))
+    (iv)
+    (hasmadedivertionplan))
     :effect
    (and
     (not (tomanageanxiety))
