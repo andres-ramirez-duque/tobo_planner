@@ -304,7 +304,7 @@ class PlannerProxy():
 
 class DummyPlanner(Timer):
   def __init__(self, prefix_plan, service_provider, s, is_ROS):
-    super(DummyPlanner, self).__init__(1)
+    super(DummyPlanner, self).__init__({True:0,False:1}[is_ROS])
     self.s=s
     self.service_provider = service_provider
     self.steps = suffix_maker.sequence_continuer_generator(prefix_plan)
@@ -312,15 +312,15 @@ class DummyPlanner(Timer):
     self.is_ROS = is_ROS # needs changed!
   
   def get_action(self, plan_step):
+    print "NOTE: Asking the dummy for an action!"
     action_bits = self.steps[self.index]
     self.index += 1
     op = action_bits[0]
     params = action_bits[1]
     if self.is_ROS:
       self.service_provider.broadcast_action(plan_step, op, params)
-    else:
-      message_out = dummy_planner_chain_message(op, params, plan_step)
-      super(DummyPlanner, self).start((message_out,))
+    message_out = dummy_planner_chain_message(op, params, plan_step)
+    super(DummyPlanner, self).start((message_out,))
     
   def _trigger(self, args):
     apply(self.s, (args,)) 
@@ -435,7 +435,8 @@ class service_provider(object):
     pass
   def set_planning_model(self):
     pass
-    
+  def set_log_fn(self):
+    pass
 
 class dummy_ros_proxy(service_provider):
   def __init__(self, plan, param_fn, yaml_fn):
@@ -500,6 +501,13 @@ class ros_proxy(service_provider):
   def set_parameter(self, path, v):
     add_report("Setting parameter: " + str(path) + " to: " + str(v))
     rospy.set_param(path, v)
+  def get_parameter(self, path, default=None):
+    if default == None:
+      v=rospy.get_param(path)
+    else:
+      v=rospy.get_param(path, default)
+    add_report("Looking up parameter: " + str(path) + ", found: " + str(v))
+    return v
   def set_last_executed_action(self, a):
     path_to_stage_param="/parameters/last_executed_action" # maybe just a yaml parameter?
     rospy.set_param(path_to_stage_param, a)
@@ -519,10 +527,10 @@ class ros_proxy(service_provider):
   def is_shutdown(self):
     return rospy.is_shutdown()
   def set_planning_model(self):
-    if str(rospy.get_param("/parameters/boolean_vars/age",True)).lower() == 'true':
-      self.set_parameter("/background_knowledge_fn", rospy.get_param("/background_knowledge_old_fn"))
+    if str(self.get_parameter("/parameters/boolean_vars/age",True)).lower() == 'true':
+      self.set_parameter("/background_knowledge_fn", self.get_parameter("/background_knowledge_old_fn"))
     else:
-      self.set_parameter("/background_knowledge_fn", rospy.get_param("/background_knowledge_young_fn"))
+      self.set_parameter("/background_knowledge_fn", self.get_parameter("/background_knowledge_young_fn"))
   
   def broadcast_action(self, plan_step, op, params):
     from tobo_planner.msg import action_chain
@@ -540,6 +548,14 @@ class ros_proxy(service_provider):
     temp_status.level = temp_status.OK
     ac_msg.execution_status = temp_status
     pub.publish(ac_msg)
+
+  def set_log_fn(self): 
+    global report_fn, REPORT_F
+    root = self.get_parameter("/logs_path")
+    report_fn = str(root) + "/" + report_fn.split("/")[-1]
+    REPORT_F = open(report_fn, 'w')
+    # set log
+    self.set_parameter("/planner_log", report_fn)
 
 ######################################################################################################
 ### stats ############################################################################################
@@ -655,12 +671,12 @@ class int_manager(object):
       self.service_provider.init_param_value(path_to_stage_param, label, options)
 
   def lookup_startup_parameters(self):
+    self.service_provider.set_log_fn()
     self.init_bool_value("age", "Is user older", [False,True])
     self.service_provider.set_planning_model()
     self.init_bool_value("iv", "Explain IV?", [False,True])
     self.init_param_value("maxdselected", "Max diverting?", ["whatdoyoumean","bruno", "look", "bam", "shakeit", "macarena", "armdance", "happy"])
     self.init_param_value("reward", "Reward?", ["bruno", "look", "bam", "shakeit", "macarena", "armdance", "happy"])
-    
 
 
   ######################################################################################################

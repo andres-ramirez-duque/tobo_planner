@@ -232,11 +232,11 @@ action_hierarchy:
     undodoneactivity:             undodoneactivity
 
 timeouts:                        
-    doactivity:                   1 #90
-    query_response:               20 #20
-    idle:                         1 #15
-    pause:                        1
-    wait:                         20 # #
-    unknown_action:               0
-    action_chain_launcher_pause:  1
+    doactivity:                   1 #60
+    query_response:               20 #25
+    idle:                         1 #1
+    pause:                        1 # 8
+    wait:                         20 # 10000
+    unknown_action:               0 # 
+    action_chain_launcher_pause:  1 # 1
     
