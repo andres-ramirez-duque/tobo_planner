@@ -744,6 +744,14 @@ class int_manager(object):
     self.add_flag(label, default)
     self._open_timers[label]=get_time()
 
+  def process_anxiety_retest(self, op, params, t):
+    label = "anxiety retest"
+    options = ("true","false")
+    default="true"
+    self.service_provider.ask_for_user_input(options, default, t, key_maker("web server",label, self.counter))
+    self.add_flag(label, default)
+    self._open_timers[label]=get_time()
+
   def process_procedure_complete_query(self, op, params, t):
     label = "procedure complete query"
     options = ("true","false")
@@ -832,6 +840,9 @@ class int_manager(object):
       timeout_label = "wait"
     elif "pause" in self._action_hierarchy[op]:
       timeout_label = "pause"
+    elif "amretestanxiety" in self._action_hierarchy[op]:
+      timeout_label = "query_response"
+      self.process_anxiety_retest(op, params, self._op_timeout[timeout_label])
     elif "anxietytest" in self._action_hierarchy[op]:
       timeout_label = "query_response"
       self.process_anxiety_test(op, params, self._op_timeout[timeout_label])
@@ -915,6 +926,8 @@ class int_manager(object):
     elif flag == "pause":
       pass
     elif flag == "anxiety test":
+      self.if_bool_parameter_then_set("amanxietymanaged", message)
+    elif flag == "anxiety retest":
       self.if_bool_parameter_then_set("amanxietymanaged", message)
     elif flag == "engagement test":
       self.if_bool_parameter_then_set("eamdisengaged", not str(message).lower() == "true")
