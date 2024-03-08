@@ -551,11 +551,10 @@ class ros_proxy(service_provider):
 
   def set_log_fn(self): 
     global report_fn, REPORT_F
-    root = self.get_parameter("/logs_path")
-    report_fn = str(root) + "/" + report_fn.split("/")[-1]
+    path = self.get_parameter("/logs_path")
+    fn = self.get_parameter("/planner_log")
+    report_fn = str(path) + "/" + str(fn)
     REPORT_F = open(report_fn, 'w')
-    # set log
-    self.set_parameter("/planner_log", report_fn)
 
 ######################################################################################################
 ### stats ############################################################################################
