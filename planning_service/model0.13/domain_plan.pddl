@@ -70,6 +70,7 @@
     (engaged )
     (forceaction )
     (requiresdisengage )
+    (askedaboutdisengagement)
     (previouscalm )
     (previousdivert )
     (previousinform )
@@ -318,6 +319,7 @@
     (amperforminganxietymanagement)
     (amrequiresdivertion)
     (duringpreprocedure)
+    (askedaboutdisengagement)
     )
     :effect
     (and
@@ -342,6 +344,7 @@
     (amperforminganxietymanagement)
     (amrequiresdivertion)
     (duringpreprocedure)
+    (askedaboutdisengagement)
     )
     :effect
     (and
@@ -374,6 +377,7 @@
     (amrequirescalming)
     (not (forceaction))
     (doneactivity ?a)
+    (not (askedaboutdisengagement))
     (increase (total-cost) 1)
     )
   )
@@ -402,6 +406,7 @@
     (not (forceaction))
     (doneactivity ?a)
     (usedmaxdactivity)
+    (not (askedaboutdisengagement))
     (increase (total-cost) 1)
     )
   )
@@ -420,6 +425,7 @@
     (amperforminganxietymanagement)
     (amrequirescalming)
     (duringpreprocedure)
+    (askedaboutdisengagement)
     )
     :effect
     (and
@@ -443,6 +449,7 @@
     (amperforminganxietymanagement)
     (amrequirescalming)
     (duringpreprocedure)
+    (askedaboutdisengagement)
     )
     :effect
     (and
@@ -474,6 +481,7 @@
     (amrequiresanxietyretest)
     (hascalmed)
     (doneactivity ?a)
+    (not (askedaboutdisengagement))
     (increase (total-cost) 1)
     )
   )
@@ -548,7 +556,9 @@
     (doneanxietytest)
     (not (okanxiety))
     (not (engaged))
-    (withdrawl ?a))
+    (withdrawl ?a)
+    (not (askedaboutdisengagement))
+    )
     :effect
    (and
     (oneof 
@@ -561,6 +571,7 @@
     )
     )
     (increase (total-cost) 1000)
+    (askedaboutdisengagement)
    )
   )  
   

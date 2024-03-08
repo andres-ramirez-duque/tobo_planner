@@ -87,6 +87,7 @@ sensors: None
 
 planner:
     boolean_vars:
+        askedaboutdisengagement:      false
         secondsitecheck:              false
         engaged:                  false
         previouscalm:                 false

@@ -510,6 +510,7 @@ class ros_proxy(service_provider):
     return v
   def set_last_executed_action(self, a):
     path_to_stage_param="/parameters/last_executed_action" # maybe just a yaml parameter?
+    if str(a).lower() == "none": return
     rospy.set_param(path_to_stage_param, a)
   def stop(self, req):
     rospy.wait_for_service('/naoqi_driver/set_behavior')
